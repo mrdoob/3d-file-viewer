@@ -1,6 +1,6 @@
 {
 	"name": "3D File Viewer",
-	"version": "1.2.0",
+	"version": "1.3.0",
 	"manifest_version": 2,
 	"offline_enabled": true,
 	"app": {
@@ -15,6 +15,7 @@
 		"text": {
 			"extensions": [
 				"glb",
+				"gltf",
 				"obj",
 				"stl",
 				"ply"
