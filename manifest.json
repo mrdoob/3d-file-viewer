@@ -1,6 +1,7 @@
 {
 	"name": "3D File Viewer",
-	"version": "1.3.0",
+	"description": "Display 3D files in Chrome OS",
+	"version": "1.4.0",
 	"manifest_version": 2,
 	"offline_enabled": true,
 	"app": {
@@ -14,6 +15,7 @@
 	"file_handlers": {
 		"text": {
 			"extensions": [
+				"drc",
 				"glb",
 				"gltf",
 				"obj",

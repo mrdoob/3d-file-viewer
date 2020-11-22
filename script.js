@@ -1,116 +1,144 @@
 import { Mesh, MeshStandardMaterial } from './three.module.js';
+import { DRACOLoader } from './loaders/DRACOLoader.js';
 import { OBJLoader } from './loaders/OBJLoader.js';
 import { PLYLoader } from './loaders/PLYLoader.js';
-import { STLLoader } from './loaders/STLLoader.js';	
-
-import { cubeUVChunk } from './shader-chunk/cube_uv_reflection_fragment.glsl.js';
-import { normalmapChunk } from './shader-chunk/normalmap_pars_fragment.glsl.js';
+import { STLLoader } from './loaders/STLLoader.js';
 
 window.addEventListener( 'load', function () {
 
 	// Experimental: Don't do this at home
+	
+	const FAKE_JSON = '{"asset":{"version":"2.0"},"scenes":[{"name":"Scene"}],"scene":0}';
+	const FAKE_SCENE = URL.createObjectURL( new Blob( [ FAKE_JSON ], { type: "application/json" } ) );
 
 	const DEFAULT_MATERAL = new MeshStandardMaterial( { color: 0x606060, roughness: 1.0, metalness: 0.0 } );
-	DEFAULT_MATERAL.onBeforeCompile = function ( shader ) {
-		shader.fragmentShader = shader.fragmentShader
-			.replace( '#include <cube_uv_reflection_fragment>', cubeUVChunk )
-			.replace( '#include <normalmap_pars_fragment>', normalmapChunk );
-	};
 
-	var canvas = viewer.shadowRoot.querySelector( 'canvas' );
-	var poster = viewer.shadowRoot.querySelector( '.slot.poster' );
-
-	var scene = viewer[ Object.getOwnPropertySymbols( viewer )[ 13 ] ];
+	// console.log( Object.getOwnPropertySymbols( viewer ) );
+	
+	const scene = viewer[ Object.getOwnPropertySymbols( viewer )[ 14 ] ];
 	
 	function setCustomObject( object ) {
-
+		
+		viewer.src = FAKE_SCENE;
 		scene.model.setObject( object );
 
-		setTimeout( function () {
-
-			canvas.classList.add('show');
-			poster.classList.remove( 'show' );
-
-		}, 1000 );
-
 	}
+	
+	function handleFile( file ) {
 
-	//
+		const extension = file.name.split( '.' ).pop().toLowerCase();
+		const reader = new FileReader();
 
-	if ( Array.isArray( window.launchData.items ) ) {
+		switch ( extension ) {
 
-		var item = window.launchData.items[ 0 ];
+			case 'drc':
 
-		item.entry.file( function ( file ) {
+				reader.addEventListener( 'load', function ( event ) {
 
-			var extension = file.name.split( '.' ).pop().toLowerCase();
-			var reader = new FileReader();
-
-			switch ( extension ) {
-
-				case 'glb':
-				case 'gltf':
-
-					viewer.src = URL.createObjectURL( file );
-
-					break;
-
-				case 'obj':
-
-					reader.addEventListener( 'load', function ( event ) {
-
-						var object = new OBJLoader().parse( event.target.result );
-
-						object.traverse( function ( child ) {
-
-							var material = child.material;
-
-							if ( material && material.isMeshPhongMaterial ) {
-
-								child.material = DEFAULT_MATERAL;
-
-							}
-
-						} );
-
-						setCustomObject( object );
-
-					}, false );
-					reader.readAsText( file );
-
-					break;
-
-				case 'ply':
-
-					reader.addEventListener( 'load', function ( event ) {
-
-						var geometry = new PLYLoader().parse( event.target.result );
+					const loader = new DRACOLoader();
+					loader.setDecoderPath( './libs/' );
+					loader.setDecoderConfig( { type: 'js' } );
+					loader.decodeDracoFile( event.target.result, function ( geometry ) {
 
 						geometry.computeVertexNormals();
 
 						setCustomObject( new Mesh( geometry, DEFAULT_MATERAL ) );
 
-					}, false );
-					reader.readAsArrayBuffer( file );
+					} );						
 
-					break;
+				}, false );
+				reader.readAsArrayBuffer( file );
 
-				case 'stl':
+				break;
 
-					reader.addEventListener( 'load', function ( event ) {
+			case 'glb':
+			case 'gltf':
+				
+				viewer.src = URL.createObjectURL( file );
 
-						var geometry = new STLLoader().parse( event.target.result );
+				break;
 
-						setCustomObject( new Mesh( geometry, DEFAULT_MATERAL ) );
+			case 'obj':
 
-					}, false );
-					reader.readAsBinaryString( file );
+				reader.addEventListener( 'load', function ( event ) {
 
-					break;
+					const object = new OBJLoader().parse( event.target.result );
 
-			}
+					object.traverse( function ( child ) {
 
-		} );
+						var material = child.material;
+
+						if ( material && material.isMeshPhongMaterial ) {
+
+							child.material = DEFAULT_MATERAL;
+
+						}
+
+					} );
+
+					setCustomObject( object );
+
+				}, false );
+				reader.readAsText( file );
+
+				break;
+
+			case 'ply':
+
+				reader.addEventListener( 'load', function ( event ) {
+
+					const geometry = new PLYLoader().parse( event.target.result );
+
+					geometry.computeVertexNormals();
+
+					setCustomObject( new Mesh( geometry, DEFAULT_MATERAL ) );
+
+				}, false );
+				reader.readAsArrayBuffer( file );
+
+				break;
+
+			case 'stl':
+
+				reader.addEventListener( 'load', function ( event ) {
+
+					const geometry = new STLLoader().parse( event.target.result );
+
+					setCustomObject( new Mesh( geometry, DEFAULT_MATERAL ) );
+
+				}, false );
+				reader.readAsBinaryString( file );
+
+				break;
+
+		}
+
+	}
+	
+	/*
+	
+	document.addEventListener( 'dragover', function ( event ) {
+
+		event.preventDefault();
+		event.dataTransfer.dropEffect = 'copy';
+
+	}, false );
+
+	document.addEventListener( 'drop', function ( event ) {
+
+		event.preventDefault();
+
+		handleFile( event.dataTransfer.files[ 0 ] );
+
+	}, false );
+
+	*/
+
+	if ( Array.isArray( window.launchData.items ) ) {
+
+		var item = window.launchData.items[ 0 ];
+
+		item.entry.file( handleFile );
 
 	}
 
