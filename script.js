@@ -1,5 +1,6 @@
 import { Mesh, MeshStandardMaterial } from './three.module.js';
 import { DRACOLoader } from './loaders/DRACOLoader.js';
+import { FBXLoader } from './loaders/FBXLoader.js';
 import { OBJLoader } from './loaders/OBJLoader.js';
 import { PLYLoader } from './loaders/PLYLoader.js';
 import { STLLoader } from './loaders/STLLoader.js';
@@ -50,6 +51,31 @@ window.addEventListener( 'load', function () {
 				reader.readAsArrayBuffer( file );
 
 				break;
+				
+			case 'fbx':
+				
+				reader.addEventListener( 'load', function ( event ) {
+
+					const object = new FBXLoader().parse( event.target.result );
+
+					object.traverse( function ( child ) {
+
+						const material = child.material;
+						
+						if ( material && material.isMeshPhongMaterial ) {
+
+							child.material = DEFAULT_MATERAL;
+
+						}
+
+					} );
+					
+					setCustomObject( object );
+
+				}, false );
+				reader.readAsArrayBuffer( file );
+
+				break;
 
 			case 'glb':
 			case 'gltf':
@@ -66,7 +92,7 @@ window.addEventListener( 'load', function () {
 
 					object.traverse( function ( child ) {
 
-						var material = child.material;
+						const material = child.material;
 
 						if ( material && material.isMeshPhongMaterial ) {
 
