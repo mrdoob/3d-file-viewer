@@ -1,9 +1,4 @@
 import { Mesh, MeshStandardMaterial } from './three.module.js';
-import { DRACOLoader } from './loaders/DRACOLoader.js';
-import { FBXLoader } from './loaders/FBXLoader.js';
-import { OBJLoader } from './loaders/OBJLoader.js';
-import { PLYLoader } from './loaders/PLYLoader.js';
-import { STLLoader } from './loaders/STLLoader.js';
 
 window.addEventListener( 'load', function () {
 
@@ -34,8 +29,9 @@ window.addEventListener( 'load', function () {
 
 			case 'drc':
 
-				reader.addEventListener( 'load', function ( event ) {
+				reader.addEventListener( 'load', async function ( event ) {
 
+					const { DRACOLoader } = await import( './loaders/DRACOLoader.js' );
 					const loader = new DRACOLoader();
 					loader.setDecoderPath( './libs/' );
 					loader.setDecoderConfig( { type: 'js' } );
@@ -54,7 +50,9 @@ window.addEventListener( 'load', function () {
 				
 			case 'fbx':
 				
-				reader.addEventListener( 'load', function ( event ) {
+				reader.addEventListener( 'load', async function ( event ) {
+					
+					const { FBXLoader } = await import( './loaders/FBXLoader.js' );
 
 					const object = new FBXLoader().parse( event.target.result );
 
@@ -86,8 +84,10 @@ window.addEventListener( 'load', function () {
 
 			case 'obj':
 
-				reader.addEventListener( 'load', function ( event ) {
+				reader.addEventListener( 'load', async function ( event ) {
 
+					const { OBJLoader } = await import( './loaders/OBJLoader.js' );
+					
 					const object = new OBJLoader().parse( event.target.result );
 
 					object.traverse( function ( child ) {
@@ -111,7 +111,9 @@ window.addEventListener( 'load', function () {
 
 			case 'ply':
 
-				reader.addEventListener( 'load', function ( event ) {
+				reader.addEventListener( 'load', async function ( event ) {
+					
+					const { PLYLoader } = await import( './loaders/PLYLoader.js' );
 
 					const geometry = new PLYLoader().parse( event.target.result );
 
@@ -126,8 +128,10 @@ window.addEventListener( 'load', function () {
 
 			case 'stl':
 
-				reader.addEventListener( 'load', function ( event ) {
+				reader.addEventListener( 'load', async function ( event ) {
 
+					const { STLLoader } = await import( './loaders/STLLoader.js' );
+					
 					const geometry = new STLLoader().parse( event.target.result );
 
 					setCustomObject( new Mesh( geometry, DEFAULT_MATERAL ) );
