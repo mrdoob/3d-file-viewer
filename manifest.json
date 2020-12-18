@@ -1,7 +1,7 @@
 {
 	"name": "3D File Viewer",
 	"description": "Display 3D files in Chrome OS",
-	"version": "1.5.0",
+	"version": "1.6.0",
 	"manifest_version": 2,
 	"offline_enabled": true,
 	"app": {
