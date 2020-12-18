@@ -32,6 +32,7 @@ window.addEventListener( 'load', function () {
 				reader.addEventListener( 'load', async function ( event ) {
 
 					const { DRACOLoader } = await import( './loaders/DRACOLoader.js' );
+
 					const loader = new DRACOLoader();
 					loader.setDecoderPath( './libs/' );
 					loader.setDecoderConfig( { type: 'js' } );
