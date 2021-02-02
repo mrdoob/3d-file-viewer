@@ -165,7 +165,9 @@ window.addEventListener( 'load', function () {
 
 	*/
 
-	if ( Array.isArray( window.launchData.items ) ) {
+	// Chrome OS
+
+	if ( 'launchData' in window && Array.isArray( window.launchData.items ) ) {
 
 		var item = window.launchData.items[ 0 ];
 
