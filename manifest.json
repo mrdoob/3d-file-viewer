@@ -1,6 +1,6 @@
 {
 	"name": "3D File Viewer",
-	"description": "Display 3D files in Chrome OS",
+	"description": "Display 3D files on Chrome OS",
 	"version": "1.6.0",
 	"manifest_version": 2,
 	"offline_enabled": true,
@@ -26,6 +26,6 @@
 		}
 	},
 	"icons": {
-		"128": "icon.png" 
+		"128": "icon.png"
 	}
 }
