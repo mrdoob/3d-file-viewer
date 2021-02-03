@@ -1,3 +1,96 @@
+// Polyfills
+
+if ( Number.EPSILON === undefined ) {
+
+	Number.EPSILON = Math.pow( 2, - 52 );
+
+}
+
+if ( Number.isInteger === undefined ) {
+
+	// Missing in IE
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isInteger
+
+	Number.isInteger = function ( value ) {
+
+		return typeof value === 'number' && isFinite( value ) && Math.floor( value ) === value;
+
+	};
+
+}
+
+//
+
+if ( Math.sign === undefined ) {
+
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sign
+
+	Math.sign = function ( x ) {
+
+		return ( x < 0 ) ? - 1 : ( x > 0 ) ? 1 : + x;
+
+	};
+
+}
+
+if ( 'name' in Function.prototype === false ) {
+
+	// Missing in IE
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/name
+
+	Object.defineProperty( Function.prototype, 'name', {
+
+		get: function () {
+
+			return this.toString().match( /^\s*function\s*([^\(\s]*)/ )[ 1 ];
+
+		}
+
+	} );
+
+}
+
+if ( Object.assign === undefined ) {
+
+	// Missing in IE
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
+
+	Object.assign = function ( target ) {
+
+		if ( target === undefined || target === null ) {
+
+			throw new TypeError( 'Cannot convert undefined or null to object' );
+
+		}
+
+		const output = Object( target );
+
+		for ( let index = 1; index < arguments.length; index ++ ) {
+
+			const source = arguments[ index ];
+
+			if ( source !== undefined && source !== null ) {
+
+				for ( const nextKey in source ) {
+
+					if ( Object.prototype.hasOwnProperty.call( source, nextKey ) ) {
+
+						output[ nextKey ] = source[ nextKey ];
+
+					}
+
+				}
+
+			}
+
+		}
+
+		return output;
+
+	};
+
+}
+
 /**
  * @license
  * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
@@ -976,7 +1069,6 @@ const IS_SAFARI = /Safari\//.test(navigator.userAgent);
 const IS_FIREFOX = /firefox/i.test(navigator.userAgent);
 const IS_OCULUS = /OculusBrowser/.test(navigator.userAgent);
 const IS_IOS_CHROME = IS_IOS && /CriOS\//.test(navigator.userAgent);
-const IS_IOS_SAFARI = IS_IOS && IS_SAFARI;
 const IS_SCENEVIEWER_CANDIDATE = IS_ANDROID && !IS_FIREFOX && !IS_OCULUS;
 
 /* @license
@@ -1362,7 +1454,7 @@ canvas.show {
   justify-content: center;
   position: absolute;
   top: 16px;
-  left: 16px;
+  right: 16px;
   width: 40px;
   height: 40px;
   box-sizing: border-box;
@@ -1439,7 +1531,7 @@ const makeTemplate = (tagName) => {
 };
 
 // threejs.org/license
-const REVISION = '121';
+const REVISION = '125';
 const CullFaceNone = 0;
 const CullFaceBack = 1;
 const CullFaceFront = 2;
@@ -1604,7 +1696,7 @@ const AlwaysStencilFunc = 519;
 
 const StaticDrawUsage = 35044;
 const DynamicDrawUsage = 35048;
-const GLSL3 = "300 es";
+const GLSL3 = '300 es';
 
 /**
  * https://github.com/mrdoob/eventdispatcher.js/
@@ -1752,6 +1844,22 @@ const MathUtils = {
 	lerp: function ( x, y, t ) {
 
 		return ( 1 - t ) * x + t * y;
+
+	},
+
+	// http://www.rorydriscoll.com/2016/03/07/frame-rate-independent-damping-using-lerp/
+
+	damp: function ( x, y, lambda, dt ) {
+
+		return MathUtils.lerp( x, y, 1 - Math.exp( - lambda * dt ) );
+
+	},
+
+	// https://www.desmos.com/calculator/vcsjnyz7x4
+
+	pingpong: function ( x, length = 1 ) {
+
+		return length - Math.abs( MathUtils.euclideanModulo( x, length * 2 ) - length );
 
 	},
 
@@ -2323,9 +2431,7 @@ class Vector2 {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		this.x = array[ offset ];
 		this.y = array[ offset + 1 ];
@@ -2334,10 +2440,7 @@ class Vector2 {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		array[ offset ] = this.x;
 		array[ offset + 1 ] = this.y;
@@ -2545,20 +2648,13 @@ class Matrix3 {
 
 	}
 
-	getInverse( matrix, throwOnDegenerate ) {
+	invert() {
 
-		if ( throwOnDegenerate !== undefined ) {
+		const te = this.elements,
 
-			console.warn( "THREE.Matrix3: .getInverse() can no longer be configured to throw on degenerate." );
-
-		}
-
-		const me = matrix.elements,
-			te = this.elements,
-
-			n11 = me[ 0 ], n21 = me[ 1 ], n31 = me[ 2 ],
-			n12 = me[ 3 ], n22 = me[ 4 ], n32 = me[ 5 ],
-			n13 = me[ 6 ], n23 = me[ 7 ], n33 = me[ 8 ],
+			n11 = te[ 0 ], n21 = te[ 1 ], n31 = te[ 2 ],
+			n12 = te[ 3 ], n22 = te[ 4 ], n32 = te[ 5 ],
+			n13 = te[ 6 ], n23 = te[ 7 ], n33 = te[ 8 ],
 
 			t11 = n33 * n22 - n32 * n23,
 			t12 = n32 * n13 - n33 * n12,
@@ -2601,7 +2697,7 @@ class Matrix3 {
 
 	getNormalMatrix( matrix4 ) {
 
-		return this.setFromMatrix4( matrix4 ).getInverse( this ).transpose();
+		return this.setFromMatrix4( matrix4 ).copy( this ).invert().transpose();
 
 	}
 
@@ -2633,6 +2729,8 @@ class Matrix3 {
 			- sy * s, sy * c, - sy * ( - s * cx + c * cy ) + cy + ty,
 			0, 0, 1
 		);
+
+		return this;
 
 	}
 
@@ -2695,9 +2793,7 @@ class Matrix3 {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		for ( let i = 0; i < 9; i ++ ) {
 
@@ -2709,10 +2805,7 @@ class Matrix3 {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		const te = this.elements;
 
@@ -2797,7 +2890,7 @@ const ImageUtils = {
 
 let textureId = 0;
 
-function Texture( image, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding ) {
+function Texture( image = Texture.DEFAULT_IMAGE, mapping = Texture.DEFAULT_MAPPING, wrapS = ClampToEdgeWrapping, wrapT = ClampToEdgeWrapping, magFilter = LinearFilter, minFilter = LinearMipmapLinearFilter, format = RGBAFormat, type = UnsignedByteType, anisotropy = 1, encoding = LinearEncoding ) {
 
 	Object.defineProperty( this, 'id', { value: textureId ++ } );
 
@@ -2805,22 +2898,22 @@ function Texture( image, mapping, wrapS, wrapT, magFilter, minFilter, format, ty
 
 	this.name = '';
 
-	this.image = image !== undefined ? image : Texture.DEFAULT_IMAGE;
+	this.image = image;
 	this.mipmaps = [];
 
-	this.mapping = mapping !== undefined ? mapping : Texture.DEFAULT_MAPPING;
+	this.mapping = mapping;
 
-	this.wrapS = wrapS !== undefined ? wrapS : ClampToEdgeWrapping;
-	this.wrapT = wrapT !== undefined ? wrapT : ClampToEdgeWrapping;
+	this.wrapS = wrapS;
+	this.wrapT = wrapT;
 
-	this.magFilter = magFilter !== undefined ? magFilter : LinearFilter;
-	this.minFilter = minFilter !== undefined ? minFilter : LinearMipmapLinearFilter;
+	this.magFilter = magFilter;
+	this.minFilter = minFilter;
 
-	this.anisotropy = anisotropy !== undefined ? anisotropy : 1;
+	this.anisotropy = anisotropy;
 
-	this.format = format !== undefined ? format : RGBAFormat;
+	this.format = format;
 	this.internalFormat = null;
-	this.type = type !== undefined ? type : UnsignedByteType;
+	this.type = type;
 
 	this.offset = new Vector2( 0, 0 );
 	this.repeat = new Vector2( 1, 1 );
@@ -2839,7 +2932,7 @@ function Texture( image, mapping, wrapS, wrapT, magFilter, minFilter, format, ty
 	//
 	// Also changing the encoding after already used by a Material will not automatically make the Material
 	// update. You need to explicitly call Material.needsUpdate to trigger it to recompile.
-	this.encoding = encoding !== undefined ? encoding : LinearEncoding;
+	this.encoding = encoding;
 
 	this.version = 0;
 	this.onUpdate = null;
@@ -2975,7 +3068,17 @@ Texture.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
 
 					for ( let i = 0, l = image.length; i < l; i ++ ) {
 
-						url.push( ImageUtils.getDataURL( image[ i ] ) );
+						// check cube texture with data textures
+
+						if ( image[ i ].isDataTexture ) {
+
+							url.push( serializeImage( image[ i ].image ) );
+
+						} else {
+
+							url.push( serializeImage( image[ i ] ) );
+
+						}
 
 					}
 
@@ -2983,7 +3086,7 @@ Texture.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
 
 					// process single image
 
-					url = ImageUtils.getDataURL( image );
+					url = serializeImage( image );
 
 				}
 
@@ -3096,7 +3199,7 @@ Texture.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
 
 } );
 
-Object.defineProperty( Texture.prototype, "needsUpdate", {
+Object.defineProperty( Texture.prototype, 'needsUpdate', {
 
 	set: function ( value ) {
 
@@ -3105,6 +3208,40 @@ Object.defineProperty( Texture.prototype, "needsUpdate", {
 	}
 
 } );
+
+function serializeImage( image ) {
+
+	if ( ( typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement ) ||
+		( typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement ) ||
+		( typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap ) ) {
+
+		// default images
+
+		return ImageUtils.getDataURL( image );
+
+	} else {
+
+		if ( image.data ) {
+
+			// images of DataTexture
+
+			return {
+				data: Array.prototype.slice.call( image.data ),
+				width: image.width,
+				height: image.height,
+				type: image.data.constructor.name
+			};
+
+		} else {
+
+			console.warn( 'THREE.Texture: Unable to serialize Texture.' );
+			return {};
+
+		}
+
+	}
+
+}
 
 class Vector4 {
 
@@ -3330,6 +3467,17 @@ class Vector4 {
 		this.y = a.y - b.y;
 		this.z = a.z - b.z;
 		this.w = a.w - b.w;
+
+		return this;
+
+	}
+
+	multiply( v ) {
+
+		this.x *= v.x;
+		this.y *= v.y;
+		this.z *= v.z;
+		this.w *= v.w;
 
 		return this;
 
@@ -3697,9 +3845,7 @@ class Vector4 {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		this.x = array[ offset ];
 		this.y = array[ offset + 1 ];
@@ -3710,10 +3856,7 @@ class Vector4 {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		array[ offset ] = this.x;
 		array[ offset + 1 ] = this.y;
@@ -3759,40 +3902,40 @@ class Vector4 {
  * Texture parameters for an auto-generated target texture
  * depthBuffer/stencilBuffer: Booleans to indicate if we should generate these buffers
 */
-function WebGLRenderTarget( width, height, options ) {
+class WebGLRenderTarget extends EventDispatcher {
 
-	this.width = width;
-	this.height = height;
+	constructor( width, height, options ) {
 
-	this.scissor = new Vector4( 0, 0, width, height );
-	this.scissorTest = false;
+		super();
 
-	this.viewport = new Vector4( 0, 0, width, height );
+		Object.defineProperty( this, 'isWebGLRenderTarget', { value: true } );
 
-	options = options || {};
+		this.width = width;
+		this.height = height;
 
-	this.texture = new Texture( undefined, options.mapping, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding );
+		this.scissor = new Vector4( 0, 0, width, height );
+		this.scissorTest = false;
 
-	this.texture.image = {};
-	this.texture.image.width = width;
-	this.texture.image.height = height;
+		this.viewport = new Vector4( 0, 0, width, height );
 
-	this.texture.generateMipmaps = options.generateMipmaps !== undefined ? options.generateMipmaps : false;
-	this.texture.minFilter = options.minFilter !== undefined ? options.minFilter : LinearFilter;
+		options = options || {};
 
-	this.depthBuffer = options.depthBuffer !== undefined ? options.depthBuffer : true;
-	this.stencilBuffer = options.stencilBuffer !== undefined ? options.stencilBuffer : false;
-	this.depthTexture = options.depthTexture !== undefined ? options.depthTexture : null;
+		this.texture = new Texture( undefined, options.mapping, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding );
 
-}
+		this.texture.image = {};
+		this.texture.image.width = width;
+		this.texture.image.height = height;
 
-WebGLRenderTarget.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
+		this.texture.generateMipmaps = options.generateMipmaps !== undefined ? options.generateMipmaps : false;
+		this.texture.minFilter = options.minFilter !== undefined ? options.minFilter : LinearFilter;
 
-	constructor: WebGLRenderTarget,
+		this.depthBuffer = options.depthBuffer !== undefined ? options.depthBuffer : true;
+		this.stencilBuffer = options.stencilBuffer !== undefined ? options.stencilBuffer : false;
+		this.depthTexture = options.depthTexture !== undefined ? options.depthTexture : null;
 
-	isWebGLRenderTarget: true,
+	}
 
-	setSize: function ( width, height ) {
+	setSize( width, height ) {
 
 		if ( this.width !== width || this.height !== height ) {
 
@@ -3809,15 +3952,15 @@ WebGLRenderTarget.prototype = Object.assign( Object.create( EventDispatcher.prot
 		this.viewport.set( 0, 0, width, height );
 		this.scissor.set( 0, 0, width, height );
 
-	},
+	}
 
-	clone: function () {
+	clone() {
 
 		return new this.constructor().copy( this );
 
-	},
+	}
 
-	copy: function ( source ) {
+	copy( source ) {
 
 		this.width = source.width;
 		this.height = source.height;
@@ -3832,41 +3975,15 @@ WebGLRenderTarget.prototype = Object.assign( Object.create( EventDispatcher.prot
 
 		return this;
 
-	},
+	}
 
-	dispose: function () {
+	dispose() {
 
 		this.dispatchEvent( { type: 'dispose' } );
 
 	}
 
-} );
-
-function WebGLMultisampleRenderTarget( width, height, options ) {
-
-	WebGLRenderTarget.call( this, width, height, options );
-
-	this.samples = 4;
-
 }
-
-WebGLMultisampleRenderTarget.prototype = Object.assign( Object.create( WebGLRenderTarget.prototype ), {
-
-	constructor: WebGLMultisampleRenderTarget,
-
-	isWebGLMultisampleRenderTarget: true,
-
-	copy: function ( source ) {
-
-		WebGLRenderTarget.prototype.copy.call( this, source );
-
-		this.samples = source.samples;
-
-		return this;
-
-	}
-
-} );
 
 class Quaternion {
 
@@ -4278,7 +4395,7 @@ class Quaternion {
 
 	}
 
-	inverse() {
+	invert() {
 
 		// quaternion is assumed to have unit length
 
@@ -4457,9 +4574,7 @@ class Quaternion {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		this._x = array[ offset ];
 		this._y = array[ offset + 1 ];
@@ -4472,10 +4587,7 @@ class Quaternion {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		array[ offset ] = this._x;
 		array[ offset + 1 ] = this._y;
@@ -5175,9 +5287,7 @@ class Vector3 {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		this.x = array[ offset ];
 		this.y = array[ offset + 1 ];
@@ -5187,10 +5297,7 @@ class Vector3 {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		array[ offset ] = this.x;
 		array[ offset + 1 ] = this.y;
@@ -6554,6 +6661,23 @@ class Matrix4 {
 
 	}
 
+	setFromMatrix3( m ) {
+
+		const me = m.elements;
+
+		this.set(
+
+			me[ 0 ], me[ 3 ], me[ 6 ], 0,
+			me[ 1 ], me[ 4 ], me[ 7 ], 0,
+			me[ 2 ], me[ 5 ], me[ 8 ], 0,
+			0, 0, 0, 1
+
+		);
+
+		return this;
+
+	}
+
 	extractBasis( xAxis, yAxis, zAxis ) {
 
 		xAxis.setFromMatrixColumn( this, 0 );
@@ -6954,22 +7078,15 @@ class Matrix4 {
 
 	}
 
-	getInverse( m, throwOnDegenerate ) {
-
-		if ( throwOnDegenerate !== undefined ) {
-
-			console.warn( "THREE.Matrix4: .getInverse() can no longer be configured to throw on degenerate." );
-
-		}
+	invert() {
 
 		// based on http://www.euclideanspace.com/maths/algebra/matrix/functions/inverse/fourD/index.htm
 		const te = this.elements,
-			me = m.elements,
 
-			n11 = me[ 0 ], n21 = me[ 1 ], n31 = me[ 2 ], n41 = me[ 3 ],
-			n12 = me[ 4 ], n22 = me[ 5 ], n32 = me[ 6 ], n42 = me[ 7 ],
-			n13 = me[ 8 ], n23 = me[ 9 ], n33 = me[ 10 ], n43 = me[ 11 ],
-			n14 = me[ 12 ], n24 = me[ 13 ], n34 = me[ 14 ], n44 = me[ 15 ],
+			n11 = te[ 0 ], n21 = te[ 1 ], n31 = te[ 2 ], n41 = te[ 3 ],
+			n12 = te[ 4 ], n22 = te[ 5 ], n32 = te[ 6 ], n42 = te[ 7 ],
+			n13 = te[ 8 ], n23 = te[ 9 ], n33 = te[ 10 ], n43 = te[ 11 ],
+			n14 = te[ 12 ], n24 = te[ 13 ], n34 = te[ 14 ], n44 = te[ 15 ],
 
 			t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44,
 			t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44,
@@ -7293,9 +7410,7 @@ class Matrix4 {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		for ( let i = 0; i < 16; i ++ ) {
 
@@ -7307,10 +7422,7 @@ class Matrix4 {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		const te = this.elements;
 
@@ -7625,10 +7737,7 @@ class Euler {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		array[ offset ] = this._x;
 		array[ offset + 1 ] = this._y;
@@ -7819,6 +7928,8 @@ function Object3D() {
 	this.frustumCulled = true;
 	this.renderOrder = 0;
 
+	this.animations = [];
+
 	this.userData = {};
 
 }
@@ -7967,7 +8078,7 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 	worldToLocal: function ( vector ) {
 
-		return vector.applyMatrix4( _m1$1.getInverse( this.matrixWorld ) );
+		return vector.applyMatrix4( _m1$1.copy( this.matrixWorld ).invert() );
 
 	},
 
@@ -8007,7 +8118,7 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 			_m1$1.extractRotation( parent.matrixWorld );
 			_q1.setFromRotationMatrix( _m1$1 );
-			this.quaternion.premultiply( _q1.inverse() );
+			this.quaternion.premultiply( _q1.invert() );
 
 		}
 
@@ -8029,12 +8140,12 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 		if ( object === this ) {
 
-			console.error( "THREE.Object3D.add: object can't be added as a child of itself.", object );
+			console.error( 'THREE.Object3D.add: object can\'t be added as a child of itself.', object );
 			return this;
 
 		}
 
-		if ( ( object && object.isObject3D ) ) {
+		if ( object && object.isObject3D ) {
 
 			if ( object.parent !== null ) {
 
@@ -8049,7 +8160,7 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 		} else {
 
-			console.error( "THREE.Object3D.add: object not an instance of THREE.Object3D.", object );
+			console.error( 'THREE.Object3D.add: object not an instance of THREE.Object3D.', object );
 
 		}
 
@@ -8086,13 +8197,32 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 	},
 
+	clear: function () {
+
+		for ( let i = 0; i < this.children.length; i ++ ) {
+
+			const object = this.children[ i ];
+
+			object.parent = null;
+
+			object.dispatchEvent( _removedEvent );
+
+		}
+
+		this.children.length = 0;
+
+		return this;
+
+
+	},
+
 	attach: function ( object ) {
 
 		// adds object as a child of this, while maintaining the object's world transform
 
 		this.updateWorldMatrix( true, false );
 
-		_m1$1.getInverse( this.matrixWorld );
+		_m1$1.copy( this.matrixWorld ).invert();
 
 		if ( object.parent !== null ) {
 
@@ -8355,7 +8485,9 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 				materials: {},
 				textures: {},
 				images: {},
-				shapes: {}
+				shapes: {},
+				skeletons: {},
+				animations: {}
 			};
 
 			output.metadata = {
@@ -8440,6 +8572,21 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 		}
 
+		if ( this.isSkinnedMesh ) {
+
+			object.bindMode = this.bindMode;
+			object.bindMatrix = this.bindMatrix.toArray();
+
+			if ( this.skeleton !== undefined ) {
+
+				serialize( meta.skeletons, this.skeleton );
+
+				object.skeleton = this.skeleton.uuid;
+
+			}
+
+		}
+
 		if ( this.material !== undefined ) {
 
 			if ( Array.isArray( this.material ) ) {
@@ -8476,6 +8623,22 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 		}
 
+		//
+
+		if ( this.animations.length > 0 ) {
+
+			object.animations = [];
+
+			for ( let i = 0; i < this.animations.length; i ++ ) {
+
+				const animation = this.animations[ i ];
+
+				object.animations.push( serialize( meta.animations, animation ) );
+
+			}
+
+		}
+
 		if ( isRootObject ) {
 
 			const geometries = extractFromCache( meta.geometries );
@@ -8483,12 +8646,16 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 			const textures = extractFromCache( meta.textures );
 			const images = extractFromCache( meta.images );
 			const shapes = extractFromCache( meta.shapes );
+			const skeletons = extractFromCache( meta.skeletons );
+			const animations = extractFromCache( meta.animations );
 
 			if ( geometries.length > 0 ) output.geometries = geometries;
 			if ( materials.length > 0 ) output.materials = materials;
 			if ( textures.length > 0 ) output.textures = textures;
 			if ( images.length > 0 ) output.images = images;
 			if ( shapes.length > 0 ) output.shapes = shapes;
+			if ( skeletons.length > 0 ) output.skeletons = skeletons;
+			if ( animations.length > 0 ) output.animations = animations;
 
 		}
 
@@ -8522,9 +8689,7 @@ Object3D.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 	},
 
-	copy: function ( source, recursive ) {
-
-		if ( recursive === undefined ) recursive = true;
+	copy: function ( source, recursive = true ) {
 
 		this.name = source.name;
 
@@ -9275,7 +9440,7 @@ class Color {
 
 		let m;
 
-		if ( m = /^((?:rgb|hsl)a?)\(\s*([^\)]*)\)/.exec( style ) ) {
+		if ( m = /^((?:rgb|hsl)a?)\(([^\)]*)\)/.exec( style ) ) {
 
 			// rgb / hsl
 
@@ -9288,27 +9453,27 @@ class Color {
 				case 'rgb':
 				case 'rgba':
 
-					if ( color = /^(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(,\s*([0-9]*\.?[0-9]+)\s*)?$/.exec( components ) ) {
+					if ( color = /^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*(\d*\.?\d+)\s*)?$/.exec( components ) ) {
 
 						// rgb(255,0,0) rgba(255,0,0,0.5)
 						this.r = Math.min( 255, parseInt( color[ 1 ], 10 ) ) / 255;
 						this.g = Math.min( 255, parseInt( color[ 2 ], 10 ) ) / 255;
 						this.b = Math.min( 255, parseInt( color[ 3 ], 10 ) ) / 255;
 
-						handleAlpha( color[ 5 ] );
+						handleAlpha( color[ 4 ] );
 
 						return this;
 
 					}
 
-					if ( color = /^(\d+)\%\s*,\s*(\d+)\%\s*,\s*(\d+)\%\s*(,\s*([0-9]*\.?[0-9]+)\s*)?$/.exec( components ) ) {
+					if ( color = /^\s*(\d+)\%\s*,\s*(\d+)\%\s*,\s*(\d+)\%\s*(?:,\s*(\d*\.?\d+)\s*)?$/.exec( components ) ) {
 
 						// rgb(100%,0%,0%) rgba(100%,0%,0%,0.5)
 						this.r = Math.min( 100, parseInt( color[ 1 ], 10 ) ) / 100;
 						this.g = Math.min( 100, parseInt( color[ 2 ], 10 ) ) / 100;
 						this.b = Math.min( 100, parseInt( color[ 3 ], 10 ) ) / 100;
 
-						handleAlpha( color[ 5 ] );
+						handleAlpha( color[ 4 ] );
 
 						return this;
 
@@ -9319,14 +9484,14 @@ class Color {
 				case 'hsl':
 				case 'hsla':
 
-					if ( color = /^([0-9]*\.?[0-9]+)\s*,\s*(\d+)\%\s*,\s*(\d+)\%\s*(,\s*([0-9]*\.?[0-9]+)\s*)?$/.exec( components ) ) {
+					if ( color = /^\s*(\d*\.?\d+)\s*,\s*(\d+)\%\s*,\s*(\d+)\%\s*(?:,\s*(\d*\.?\d+)\s*)?$/.exec( components ) ) {
 
 						// hsl(120,50%,50%) hsla(120,50%,50%,0.5)
 						const h = parseFloat( color[ 1 ] ) / 360;
 						const s = parseInt( color[ 2 ], 10 ) / 100;
 						const l = parseInt( color[ 3 ], 10 ) / 100;
 
-						handleAlpha( color[ 5 ] );
+						handleAlpha( color[ 4 ] );
 
 						return this.setHSL( h, s, l );
 
@@ -9336,7 +9501,7 @@ class Color {
 
 			}
 
-		} else if ( m = /^\#([A-Fa-f0-9]+)$/.exec( style ) ) {
+		} else if ( m = /^\#([A-Fa-f\d]+)$/.exec( style ) ) {
 
 			// hex color
 
@@ -9412,9 +9577,7 @@ class Color {
 
 	}
 
-	copyGammaToLinear( color, gammaFactor ) {
-
-		if ( gammaFactor === undefined ) gammaFactor = 2.0;
+	copyGammaToLinear( color, gammaFactor = 2.0 ) {
 
 		this.r = Math.pow( color.r, gammaFactor );
 		this.g = Math.pow( color.g, gammaFactor );
@@ -9424,9 +9587,7 @@ class Color {
 
 	}
 
-	copyLinearToGamma( color, gammaFactor ) {
-
-		if ( gammaFactor === undefined ) gammaFactor = 2.0;
+	copyLinearToGamma( color, gammaFactor = 2.0 ) {
 
 		const safeInverse = ( gammaFactor > 0 ) ? ( 1.0 / gammaFactor ) : 1.0;
 
@@ -9640,6 +9801,16 @@ class Color {
 
 	}
 
+	lerpColors( color1, color2, alpha ) {
+
+		this.r = color1.r + ( color2.r - color1.r ) * alpha;
+		this.g = color1.g + ( color2.g - color1.g ) * alpha;
+		this.b = color1.b + ( color2.b - color1.b ) * alpha;
+
+		return this;
+
+	}
+
 	lerpHSL( color, alpha ) {
 
 		this.getHSL( _hslA );
@@ -9661,9 +9832,7 @@ class Color {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		this.r = array[ offset ];
 		this.g = array[ offset + 1 ];
@@ -9673,10 +9842,7 @@ class Color {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		array[ offset ] = this.r;
 		array[ offset + 1 ] = this.g;
@@ -9721,7 +9887,7 @@ Color.prototype.b = 1;
 
 class Face3 {
 
-	constructor( a, b, c, normal, color, materialIndex ) {
+	constructor( a, b, c, normal, color, materialIndex = 0 ) {
 
 		this.a = a;
 		this.b = b;
@@ -9733,7 +9899,7 @@ class Face3 {
 		this.color = ( color && color.isColor ) ? color : new Color();
 		this.vertexColors = Array.isArray( color ) ? color : [];
 
-		this.materialIndex = materialIndex !== undefined ? materialIndex : 0;
+		this.materialIndex = materialIndex;
 
 	}
 
@@ -9866,7 +10032,7 @@ Material.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 			if ( newValue === undefined ) {
 
-				console.warn( "THREE.Material: '" + key + "' parameter is undefined." );
+				console.warn( 'THREE.Material: \'' + key + '\' parameter is undefined.' );
 				continue;
 
 			}
@@ -9884,7 +10050,7 @@ Material.prototype = Object.assign( Object.create( EventDispatcher.prototype ), 
 
 			if ( currentValue === undefined ) {
 
-				console.warn( "THREE." + this.type + ": '" + key + "' is not a property of this material." );
+				console.warn( 'THREE.' + this.type + ': \'' + key + '\' is not a property of this material.' );
 				continue;
 
 			}
@@ -10599,9 +10765,7 @@ Object.assign( BufferAttribute.prototype, {
 
 	},
 
-	set: function ( value, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	set: function ( value, offset = 0 ) {
 
 		this.array.set( value, offset );
 
@@ -10799,6 +10963,15 @@ function Uint32BufferAttribute( array, itemSize, normalized ) {
 Uint32BufferAttribute.prototype = Object.create( BufferAttribute.prototype );
 Uint32BufferAttribute.prototype.constructor = Uint32BufferAttribute;
 
+function Float16BufferAttribute( array, itemSize, normalized ) {
+
+	BufferAttribute.call( this, new Uint16Array( array ), itemSize, normalized );
+
+}
+
+Float16BufferAttribute.prototype = Object.create( BufferAttribute.prototype );
+Float16BufferAttribute.prototype.constructor = Float16BufferAttribute;
+Float16BufferAttribute.prototype.isFloat16BufferAttribute = true;
 
 function Float32BufferAttribute( array, itemSize, normalized ) {
 
@@ -10819,285 +10992,6 @@ function Float64BufferAttribute( array, itemSize, normalized ) {
 Float64BufferAttribute.prototype = Object.create( BufferAttribute.prototype );
 Float64BufferAttribute.prototype.constructor = Float64BufferAttribute;
 
-class DirectGeometry {
-
-	constructor() {
-
-		this.vertices = [];
-		this.normals = [];
-		this.colors = [];
-		this.uvs = [];
-		this.uvs2 = [];
-
-		this.groups = [];
-
-		this.morphTargets = {};
-
-		this.skinWeights = [];
-		this.skinIndices = [];
-
-		// this.lineDistances = [];
-
-		this.boundingBox = null;
-		this.boundingSphere = null;
-
-		// update flags
-
-		this.verticesNeedUpdate = false;
-		this.normalsNeedUpdate = false;
-		this.colorsNeedUpdate = false;
-		this.uvsNeedUpdate = false;
-		this.groupsNeedUpdate = false;
-
-	}
-
-	computeGroups( geometry ) {
-
-		const groups = [];
-
-		let group, i;
-		let materialIndex = undefined;
-
-		const faces = geometry.faces;
-
-		for ( i = 0; i < faces.length; i ++ ) {
-
-			const face = faces[ i ];
-
-			// materials
-
-			if ( face.materialIndex !== materialIndex ) {
-
-				materialIndex = face.materialIndex;
-
-				if ( group !== undefined ) {
-
-					group.count = ( i * 3 ) - group.start;
-					groups.push( group );
-
-				}
-
-				group = {
-					start: i * 3,
-					materialIndex: materialIndex
-				};
-
-			}
-
-		}
-
-		if ( group !== undefined ) {
-
-			group.count = ( i * 3 ) - group.start;
-			groups.push( group );
-
-		}
-
-		this.groups = groups;
-
-	}
-
-	fromGeometry( geometry ) {
-
-		const faces = geometry.faces;
-		const vertices = geometry.vertices;
-		const faceVertexUvs = geometry.faceVertexUvs;
-
-		const hasFaceVertexUv = faceVertexUvs[ 0 ] && faceVertexUvs[ 0 ].length > 0;
-		const hasFaceVertexUv2 = faceVertexUvs[ 1 ] && faceVertexUvs[ 1 ].length > 0;
-
-		// morphs
-
-		const morphTargets = geometry.morphTargets;
-		const morphTargetsLength = morphTargets.length;
-
-		let morphTargetsPosition;
-
-		if ( morphTargetsLength > 0 ) {
-
-			morphTargetsPosition = [];
-
-			for ( let i = 0; i < morphTargetsLength; i ++ ) {
-
-				morphTargetsPosition[ i ] = {
-					name: morphTargets[ i ].name,
-				 	data: []
-				};
-
-			}
-
-			this.morphTargets.position = morphTargetsPosition;
-
-		}
-
-		const morphNormals = geometry.morphNormals;
-		const morphNormalsLength = morphNormals.length;
-
-		let morphTargetsNormal;
-
-		if ( morphNormalsLength > 0 ) {
-
-			morphTargetsNormal = [];
-
-			for ( let i = 0; i < morphNormalsLength; i ++ ) {
-
-				morphTargetsNormal[ i ] = {
-					name: morphNormals[ i ].name,
-				 	data: []
-				};
-
-			}
-
-			this.morphTargets.normal = morphTargetsNormal;
-
-		}
-
-		// skins
-
-		const skinIndices = geometry.skinIndices;
-		const skinWeights = geometry.skinWeights;
-
-		const hasSkinIndices = skinIndices.length === vertices.length;
-		const hasSkinWeights = skinWeights.length === vertices.length;
-
-		//
-
-		if ( vertices.length > 0 && faces.length === 0 ) {
-
-			console.error( 'THREE.DirectGeometry: Faceless geometries are not supported.' );
-
-		}
-
-		for ( let i = 0; i < faces.length; i ++ ) {
-
-			const face = faces[ i ];
-
-			this.vertices.push( vertices[ face.a ], vertices[ face.b ], vertices[ face.c ] );
-
-			const vertexNormals = face.vertexNormals;
-
-			if ( vertexNormals.length === 3 ) {
-
-				this.normals.push( vertexNormals[ 0 ], vertexNormals[ 1 ], vertexNormals[ 2 ] );
-
-			} else {
-
-				const normal = face.normal;
-
-				this.normals.push( normal, normal, normal );
-
-			}
-
-			const vertexColors = face.vertexColors;
-
-			if ( vertexColors.length === 3 ) {
-
-				this.colors.push( vertexColors[ 0 ], vertexColors[ 1 ], vertexColors[ 2 ] );
-
-			} else {
-
-				const color = face.color;
-
-				this.colors.push( color, color, color );
-
-			}
-
-			if ( hasFaceVertexUv === true ) {
-
-				const vertexUvs = faceVertexUvs[ 0 ][ i ];
-
-				if ( vertexUvs !== undefined ) {
-
-					this.uvs.push( vertexUvs[ 0 ], vertexUvs[ 1 ], vertexUvs[ 2 ] );
-
-				} else {
-
-					console.warn( 'THREE.DirectGeometry.fromGeometry(): Undefined vertexUv ', i );
-
-					this.uvs.push( new Vector2(), new Vector2(), new Vector2() );
-
-				}
-
-			}
-
-			if ( hasFaceVertexUv2 === true ) {
-
-				const vertexUvs = faceVertexUvs[ 1 ][ i ];
-
-				if ( vertexUvs !== undefined ) {
-
-					this.uvs2.push( vertexUvs[ 0 ], vertexUvs[ 1 ], vertexUvs[ 2 ] );
-
-				} else {
-
-					console.warn( 'THREE.DirectGeometry.fromGeometry(): Undefined vertexUv2 ', i );
-
-					this.uvs2.push( new Vector2(), new Vector2(), new Vector2() );
-
-				}
-
-			}
-
-			// morphs
-
-			for ( let j = 0; j < morphTargetsLength; j ++ ) {
-
-				const morphTarget = morphTargets[ j ].vertices;
-
-				morphTargetsPosition[ j ].data.push( morphTarget[ face.a ], morphTarget[ face.b ], morphTarget[ face.c ] );
-
-			}
-
-			for ( let j = 0; j < morphNormalsLength; j ++ ) {
-
-				const morphNormal = morphNormals[ j ].vertexNormals[ i ];
-
-				morphTargetsNormal[ j ].data.push( morphNormal.a, morphNormal.b, morphNormal.c );
-
-			}
-
-			// skins
-
-			if ( hasSkinIndices ) {
-
-				this.skinIndices.push( skinIndices[ face.a ], skinIndices[ face.b ], skinIndices[ face.c ] );
-
-			}
-
-			if ( hasSkinWeights ) {
-
-				this.skinWeights.push( skinWeights[ face.a ], skinWeights[ face.b ], skinWeights[ face.c ] );
-
-			}
-
-		}
-
-		this.computeGroups( geometry );
-
-		this.verticesNeedUpdate = geometry.verticesNeedUpdate;
-		this.normalsNeedUpdate = geometry.normalsNeedUpdate;
-		this.colorsNeedUpdate = geometry.colorsNeedUpdate;
-		this.uvsNeedUpdate = geometry.uvsNeedUpdate;
-		this.groupsNeedUpdate = geometry.groupsNeedUpdate;
-
-		if ( geometry.boundingSphere !== null ) {
-
-			this.boundingSphere = geometry.boundingSphere.clone();
-
-		}
-
-		if ( geometry.boundingBox !== null ) {
-
-			this.boundingBox = geometry.boundingBox.clone();
-
-		}
-
-		return this;
-
-	}
-
-}
-
 function arrayMax( array ) {
 
 	if ( array.length === 0 ) return - Infinity;
@@ -11114,7 +11008,26 @@ function arrayMax( array ) {
 
 }
 
-let _bufferGeometryId = 1; // BufferGeometry uses odd numbers as Id
+const TYPED_ARRAYS = {
+	Int8Array: Int8Array,
+	Uint8Array: Uint8Array,
+	// Workaround for IE11 pre KB2929437. See #11440
+	Uint8ClampedArray: typeof Uint8ClampedArray !== 'undefined' ? Uint8ClampedArray : Uint8Array,
+	Int16Array: Int16Array,
+	Uint16Array: Uint16Array,
+	Int32Array: Int32Array,
+	Uint32Array: Uint32Array,
+	Float32Array: Float32Array,
+	Float64Array: Float64Array
+};
+
+function getTypedArray( type, buffer ) {
+
+	return new TYPED_ARRAYS[ type ]( buffer );
+
+}
+
+let _id = 0;
 
 const _m1$2 = new Matrix4();
 const _obj = new Object3D();
@@ -11125,7 +11038,7 @@ const _vector$4 = new Vector3();
 
 function BufferGeometry() {
 
-	Object.defineProperty( this, 'id', { value: _bufferGeometryId += 2 } );
+	Object.defineProperty( this, 'id', { value: _id ++ } );
 
 	this.uuid = MathUtils.generateUUID();
 
@@ -11199,13 +11112,19 @@ BufferGeometry.prototype = Object.assign( Object.create( EventDispatcher.prototy
 
 	},
 
-	addGroup: function ( start, count, materialIndex ) {
+	hasAttribute: function ( name ) {
+
+		return this.attributes[ name ] !== undefined;
+
+	},
+
+	addGroup: function ( start, count, materialIndex = 0 ) {
 
 		this.groups.push( {
 
 			start: start,
 			count: count,
-			materialIndex: materialIndex !== undefined ? materialIndex : 0
+			materialIndex: materialIndex
 
 		} );
 
@@ -11358,54 +11277,6 @@ BufferGeometry.prototype = Object.assign( Object.create( EventDispatcher.prototy
 
 	},
 
-	setFromObject: function ( object ) {
-
-		// console.log( 'THREE.BufferGeometry.setFromObject(). Converting', object, this );
-
-		const geometry = object.geometry;
-
-		if ( object.isPoints || object.isLine ) {
-
-			const positions = new Float32BufferAttribute( geometry.vertices.length * 3, 3 );
-			const colors = new Float32BufferAttribute( geometry.colors.length * 3, 3 );
-
-			this.setAttribute( 'position', positions.copyVector3sArray( geometry.vertices ) );
-			this.setAttribute( 'color', colors.copyColorsArray( geometry.colors ) );
-
-			if ( geometry.lineDistances && geometry.lineDistances.length === geometry.vertices.length ) {
-
-				const lineDistances = new Float32BufferAttribute( geometry.lineDistances.length, 1 );
-
-				this.setAttribute( 'lineDistance', lineDistances.copyArray( geometry.lineDistances ) );
-
-			}
-
-			if ( geometry.boundingSphere !== null ) {
-
-				this.boundingSphere = geometry.boundingSphere.clone();
-
-			}
-
-			if ( geometry.boundingBox !== null ) {
-
-				this.boundingBox = geometry.boundingBox.clone();
-
-			}
-
-		} else if ( object.isMesh ) {
-
-			if ( geometry && geometry.isGeometry ) {
-
-				this.fromGeometry( geometry );
-
-			}
-
-		}
-
-		return this;
-
-	},
-
 	setFromPoints: function ( points ) {
 
 		const position = [];
@@ -11418,232 +11289,6 @@ BufferGeometry.prototype = Object.assign( Object.create( EventDispatcher.prototy
 		}
 
 		this.setAttribute( 'position', new Float32BufferAttribute( position, 3 ) );
-
-		return this;
-
-	},
-
-	updateFromObject: function ( object ) {
-
-		let geometry = object.geometry;
-
-		if ( object.isMesh ) {
-
-			let direct = geometry.__directGeometry;
-
-			if ( geometry.elementsNeedUpdate === true ) {
-
-				direct = undefined;
-				geometry.elementsNeedUpdate = false;
-
-			}
-
-			if ( direct === undefined ) {
-
-				return this.fromGeometry( geometry );
-
-			}
-
-			direct.verticesNeedUpdate = geometry.verticesNeedUpdate;
-			direct.normalsNeedUpdate = geometry.normalsNeedUpdate;
-			direct.colorsNeedUpdate = geometry.colorsNeedUpdate;
-			direct.uvsNeedUpdate = geometry.uvsNeedUpdate;
-			direct.groupsNeedUpdate = geometry.groupsNeedUpdate;
-
-			geometry.verticesNeedUpdate = false;
-			geometry.normalsNeedUpdate = false;
-			geometry.colorsNeedUpdate = false;
-			geometry.uvsNeedUpdate = false;
-			geometry.groupsNeedUpdate = false;
-
-			geometry = direct;
-
-		}
-
-		if ( geometry.verticesNeedUpdate === true ) {
-
-			const attribute = this.attributes.position;
-
-			if ( attribute !== undefined ) {
-
-				attribute.copyVector3sArray( geometry.vertices );
-				attribute.needsUpdate = true;
-
-			}
-
-			geometry.verticesNeedUpdate = false;
-
-		}
-
-		if ( geometry.normalsNeedUpdate === true ) {
-
-			const attribute = this.attributes.normal;
-
-			if ( attribute !== undefined ) {
-
-				attribute.copyVector3sArray( geometry.normals );
-				attribute.needsUpdate = true;
-
-			}
-
-			geometry.normalsNeedUpdate = false;
-
-		}
-
-		if ( geometry.colorsNeedUpdate === true ) {
-
-			const attribute = this.attributes.color;
-
-			if ( attribute !== undefined ) {
-
-				attribute.copyColorsArray( geometry.colors );
-				attribute.needsUpdate = true;
-
-			}
-
-			geometry.colorsNeedUpdate = false;
-
-		}
-
-		if ( geometry.uvsNeedUpdate ) {
-
-			const attribute = this.attributes.uv;
-
-			if ( attribute !== undefined ) {
-
-				attribute.copyVector2sArray( geometry.uvs );
-				attribute.needsUpdate = true;
-
-			}
-
-			geometry.uvsNeedUpdate = false;
-
-		}
-
-		if ( geometry.lineDistancesNeedUpdate ) {
-
-			const attribute = this.attributes.lineDistance;
-
-			if ( attribute !== undefined ) {
-
-				attribute.copyArray( geometry.lineDistances );
-				attribute.needsUpdate = true;
-
-			}
-
-			geometry.lineDistancesNeedUpdate = false;
-
-		}
-
-		if ( geometry.groupsNeedUpdate ) {
-
-			geometry.computeGroups( object.geometry );
-			this.groups = geometry.groups;
-
-			geometry.groupsNeedUpdate = false;
-
-		}
-
-		return this;
-
-	},
-
-	fromGeometry: function ( geometry ) {
-
-		geometry.__directGeometry = new DirectGeometry().fromGeometry( geometry );
-
-		return this.fromDirectGeometry( geometry.__directGeometry );
-
-	},
-
-	fromDirectGeometry: function ( geometry ) {
-
-		const positions = new Float32Array( geometry.vertices.length * 3 );
-		this.setAttribute( 'position', new BufferAttribute( positions, 3 ).copyVector3sArray( geometry.vertices ) );
-
-		if ( geometry.normals.length > 0 ) {
-
-			const normals = new Float32Array( geometry.normals.length * 3 );
-			this.setAttribute( 'normal', new BufferAttribute( normals, 3 ).copyVector3sArray( geometry.normals ) );
-
-		}
-
-		if ( geometry.colors.length > 0 ) {
-
-			const colors = new Float32Array( geometry.colors.length * 3 );
-			this.setAttribute( 'color', new BufferAttribute( colors, 3 ).copyColorsArray( geometry.colors ) );
-
-		}
-
-		if ( geometry.uvs.length > 0 ) {
-
-			const uvs = new Float32Array( geometry.uvs.length * 2 );
-			this.setAttribute( 'uv', new BufferAttribute( uvs, 2 ).copyVector2sArray( geometry.uvs ) );
-
-		}
-
-		if ( geometry.uvs2.length > 0 ) {
-
-			const uvs2 = new Float32Array( geometry.uvs2.length * 2 );
-			this.setAttribute( 'uv2', new BufferAttribute( uvs2, 2 ).copyVector2sArray( geometry.uvs2 ) );
-
-		}
-
-		// groups
-
-		this.groups = geometry.groups;
-
-		// morphs
-
-		for ( const name in geometry.morphTargets ) {
-
-			const array = [];
-			const morphTargets = geometry.morphTargets[ name ];
-
-			for ( let i = 0, l = morphTargets.length; i < l; i ++ ) {
-
-				const morphTarget = morphTargets[ i ];
-
-				const attribute = new Float32BufferAttribute( morphTarget.data.length * 3, 3 );
-				attribute.name = morphTarget.name;
-
-				array.push( attribute.copyVector3sArray( morphTarget.data ) );
-
-			}
-
-			this.morphAttributes[ name ] = array;
-
-		}
-
-		// skinning
-
-		if ( geometry.skinIndices.length > 0 ) {
-
-			const skinIndices = new Float32BufferAttribute( geometry.skinIndices.length * 4, 4 );
-			this.setAttribute( 'skinIndex', skinIndices.copyVector4sArray( geometry.skinIndices ) );
-
-		}
-
-		if ( geometry.skinWeights.length > 0 ) {
-
-			const skinWeights = new Float32BufferAttribute( geometry.skinWeights.length * 4, 4 );
-			this.setAttribute( 'skinWeight', skinWeights.copyVector4sArray( geometry.skinWeights ) );
-
-		}
-
-		//
-
-		if ( geometry.boundingSphere !== null ) {
-
-			this.boundingSphere = geometry.boundingSphere.clone();
-
-		}
-
-		if ( geometry.boundingBox !== null ) {
-
-			this.boundingBox = geometry.boundingBox.clone();
-
-		}
 
 		return this;
 
@@ -11837,6 +11482,171 @@ BufferGeometry.prototype = Object.assign( Object.create( EventDispatcher.prototy
 
 	},
 
+	computeTangents: function () {
+
+		const index = this.index;
+		const attributes = this.attributes;
+
+		// based on http://www.terathon.com/code/tangent.html
+		// (per vertex tangents)
+
+		if ( index === null ||
+			 attributes.position === undefined ||
+			 attributes.normal === undefined ||
+			 attributes.uv === undefined ) {
+
+			console.error( 'THREE.BufferGeometry: .computeTangents() failed. Missing required attributes (index, position, normal or uv)' );
+			return;
+
+		}
+
+		const indices = index.array;
+		const positions = attributes.position.array;
+		const normals = attributes.normal.array;
+		const uvs = attributes.uv.array;
+
+		const nVertices = positions.length / 3;
+
+		if ( attributes.tangent === undefined ) {
+
+			this.setAttribute( 'tangent', new BufferAttribute( new Float32Array( 4 * nVertices ), 4 ) );
+
+		}
+
+		const tangents = attributes.tangent.array;
+
+		const tan1 = [], tan2 = [];
+
+		for ( let i = 0; i < nVertices; i ++ ) {
+
+			tan1[ i ] = new Vector3();
+			tan2[ i ] = new Vector3();
+
+		}
+
+		const vA = new Vector3(),
+			vB = new Vector3(),
+			vC = new Vector3(),
+
+			uvA = new Vector2(),
+			uvB = new Vector2(),
+			uvC = new Vector2(),
+
+			sdir = new Vector3(),
+			tdir = new Vector3();
+
+		function handleTriangle( a, b, c ) {
+
+			vA.fromArray( positions, a * 3 );
+			vB.fromArray( positions, b * 3 );
+			vC.fromArray( positions, c * 3 );
+
+			uvA.fromArray( uvs, a * 2 );
+			uvB.fromArray( uvs, b * 2 );
+			uvC.fromArray( uvs, c * 2 );
+
+			vB.sub( vA );
+			vC.sub( vA );
+
+			uvB.sub( uvA );
+			uvC.sub( uvA );
+
+			const r = 1.0 / ( uvB.x * uvC.y - uvC.x * uvB.y );
+
+			// silently ignore degenerate uv triangles having coincident or colinear vertices
+
+			if ( ! isFinite( r ) ) return;
+
+			sdir.copy( vB ).multiplyScalar( uvC.y ).addScaledVector( vC, - uvB.y ).multiplyScalar( r );
+			tdir.copy( vC ).multiplyScalar( uvB.x ).addScaledVector( vB, - uvC.x ).multiplyScalar( r );
+
+			tan1[ a ].add( sdir );
+			tan1[ b ].add( sdir );
+			tan1[ c ].add( sdir );
+
+			tan2[ a ].add( tdir );
+			tan2[ b ].add( tdir );
+			tan2[ c ].add( tdir );
+
+		}
+
+		let groups = this.groups;
+
+		if ( groups.length === 0 ) {
+
+			groups = [ {
+				start: 0,
+				count: indices.length
+			} ];
+
+		}
+
+		for ( let i = 0, il = groups.length; i < il; ++ i ) {
+
+			const group = groups[ i ];
+
+			const start = group.start;
+			const count = group.count;
+
+			for ( let j = start, jl = start + count; j < jl; j += 3 ) {
+
+				handleTriangle(
+					indices[ j + 0 ],
+					indices[ j + 1 ],
+					indices[ j + 2 ]
+				);
+
+			}
+
+		}
+
+		const tmp = new Vector3(), tmp2 = new Vector3();
+		const n = new Vector3(), n2 = new Vector3();
+
+		function handleVertex( v ) {
+
+			n.fromArray( normals, v * 3 );
+			n2.copy( n );
+
+			const t = tan1[ v ];
+
+			// Gram-Schmidt orthogonalize
+
+			tmp.copy( t );
+			tmp.sub( n.multiplyScalar( n.dot( t ) ) ).normalize();
+
+			// Calculate handedness
+
+			tmp2.crossVectors( n2, t );
+			const test = tmp2.dot( tan2[ v ] );
+			const w = ( test < 0.0 ) ? - 1.0 : 1.0;
+
+			tangents[ v * 4 ] = tmp.x;
+			tangents[ v * 4 + 1 ] = tmp.y;
+			tangents[ v * 4 + 2 ] = tmp.z;
+			tangents[ v * 4 + 3 ] = w;
+
+		}
+
+		for ( let i = 0, il = groups.length; i < il; ++ i ) {
+
+			const group = groups[ i ];
+
+			const start = group.start;
+			const count = group.count;
+
+			for ( let j = start, jl = start + count; j < jl; j += 3 ) {
+
+				handleVertex( indices[ j + 0 ] );
+				handleVertex( indices[ j + 1 ] );
+				handleVertex( indices[ j + 2 ] );
+
+			}
+
+		}
+
+	},
+
 	computeVertexNormals: function () {
 
 		const index = this.index;
@@ -12024,7 +11834,7 @@ BufferGeometry.prototype = Object.assign( Object.create( EventDispatcher.prototy
 
 		if ( this.index === null ) {
 
-			console.warn( 'THREE.BufferGeometry.toNonIndexed(): Geometry is already non-indexed.' );
+			console.warn( 'THREE.BufferGeometry.toNonIndexed(): BufferGeometry is already non-indexed.' );
 			return this;
 
 		}
@@ -12371,14 +12181,14 @@ const _uvC = new Vector2();
 const _intersectionPoint = new Vector3();
 const _intersectionPointWorld = new Vector3();
 
-function Mesh( geometry, material ) {
+function Mesh( geometry = new BufferGeometry(), material = new MeshBasicMaterial() ) {
 
 	Object3D.call( this );
 
 	this.type = 'Mesh';
 
-	this.geometry = geometry !== undefined ? geometry : new BufferGeometry();
-	this.material = material !== undefined ? material : new MeshBasicMaterial();
+	this.geometry = geometry;
+	this.material = material;
 
 	this.updateMorphTargets();
 
@@ -12477,7 +12287,7 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		//
 
-		_inverseMatrix.getInverse( matrixWorld );
+		_inverseMatrix.copy( matrixWorld ).invert();
 		_ray.copy( raycaster.ray ).applyMatrix4( _inverseMatrix );
 
 		// Check boundingBox before continuing
@@ -12621,48 +12431,7 @@ Mesh.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		} else if ( geometry.isGeometry ) {
 
-			const isMultiMaterial = Array.isArray( material );
-
-			const vertices = geometry.vertices;
-			const faces = geometry.faces;
-			let uvs;
-
-			const faceVertexUvs = geometry.faceVertexUvs[ 0 ];
-			if ( faceVertexUvs.length > 0 ) uvs = faceVertexUvs;
-
-			for ( let f = 0, fl = faces.length; f < fl; f ++ ) {
-
-				const face = faces[ f ];
-				const faceMaterial = isMultiMaterial ? material[ face.materialIndex ] : material;
-
-				if ( faceMaterial === undefined ) continue;
-
-				const fvA = vertices[ face.a ];
-				const fvB = vertices[ face.b ];
-				const fvC = vertices[ face.c ];
-
-				intersection = checkIntersection( this, faceMaterial, raycaster, _ray, fvA, fvB, fvC, _intersectionPoint );
-
-				if ( intersection ) {
-
-					if ( uvs && uvs[ f ] ) {
-
-						const uvs_f = uvs[ f ];
-						_uvA.copy( uvs_f[ 0 ] );
-						_uvB.copy( uvs_f[ 1 ] );
-						_uvC.copy( uvs_f[ 2 ] );
-
-						intersection.uv = Triangle.getUV( _intersectionPoint, fvA, fvB, fvC, _uvA, _uvB, _uvC, new Vector2() );
-
-					}
-
-					intersection.face = face;
-					intersection.faceIndex = f;
-					intersects.push( intersection );
-
-				}
-
-			}
+			console.error( 'THREE.Mesh.raycast() no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
 
 		}
 
@@ -12791,13 +12560,13 @@ function checkBufferGeometryIntersection( object, material, raycaster, ray, posi
 
 }
 
-class BoxBufferGeometry extends BufferGeometry {
+class BoxGeometry extends BufferGeometry {
 
 	constructor( width = 1, height = 1, depth = 1, widthSegments = 1, heightSegments = 1, depthSegments = 1 ) {
 
 		super();
 
-		this.type = 'BoxBufferGeometry';
+		this.type = 'BoxGeometry';
 
 		this.parameters = {
 			width: width,
@@ -13265,7 +13034,7 @@ Camera.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		}
 
-		this.updateMatrixWorld( true );
+		this.updateWorldMatrix( true, false );
 
 		const e = this.matrixWorld.elements;
 
@@ -13277,7 +13046,7 @@ Camera.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		Object3D.prototype.updateMatrixWorld.call( this, force );
 
-		this.matrixWorldInverse.getInverse( this.matrixWorld );
+		this.matrixWorldInverse.copy( this.matrixWorld ).invert();
 
 	},
 
@@ -13285,7 +13054,7 @@ Camera.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		Object3D.prototype.updateWorldMatrix.call( this, updateParents, updateChildren );
 
-		this.matrixWorldInverse.getInverse( this.matrixWorld );
+		this.matrixWorldInverse.copy( this.matrixWorld ).invert();
 
 	},
 
@@ -13297,20 +13066,20 @@ Camera.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 } );
 
-function PerspectiveCamera( fov, aspect, near, far ) {
+function PerspectiveCamera( fov = 50, aspect = 1, near = 0.1, far = 2000 ) {
 
 	Camera.call( this );
 
 	this.type = 'PerspectiveCamera';
 
-	this.fov = fov !== undefined ? fov : 50;
+	this.fov = fov;
 	this.zoom = 1;
 
-	this.near = near !== undefined ? near : 0.1;
-	this.far = far !== undefined ? far : 2000;
+	this.near = near;
+	this.far = far;
 	this.focus = 10;
 
-	this.aspect = aspect !== undefined ? aspect : 1;
+	this.aspect = aspect;
 	this.view = null;
 
 	this.filmGauge = 35;	// width of the film (default in millimeters)
@@ -13357,7 +13126,7 @@ PerspectiveCamera.prototype = Object.assign( Object.create( Camera.prototype ), 
 	 */
 	setFocalLength: function ( focalLength ) {
 
-		// see http://www.bobatkins.com/photography/technical/field_of_view.html
+		/** see {@link http://www.bobatkins.com/photography/technical/field_of_view.html} */
 		const vExtentSlope = 0.5 * this.getFilmHeight() / focalLength;
 
 		this.fov = MathUtils.RAD2DEG * 2 * Math.atan( vExtentSlope );
@@ -13500,7 +13269,7 @@ PerspectiveCamera.prototype = Object.assign( Object.create( Camera.prototype ), 
 
 		this.projectionMatrix.makePerspective( left, left + width, top, top - height, near, this.far );
 
-		this.projectionMatrixInverse.getInverse( this.projectionMatrix );
+		this.projectionMatrixInverse.copy( this.projectionMatrix ).invert();
 
 	},
 
@@ -13620,22 +13389,6 @@ function CubeCamera( near, far, renderTarget ) {
 
 	};
 
-	this.clear = function ( renderer, color, depth, stencil ) {
-
-		const currentRenderTarget = renderer.getRenderTarget();
-
-		for ( let i = 0; i < 6; i ++ ) {
-
-			renderer.setRenderTarget( renderTarget, i );
-
-			renderer.clear( color, depth, stencil );
-
-		}
-
-		renderer.setRenderTarget( currentRenderTarget );
-
-	};
-
 }
 
 CubeCamera.prototype = Object.create( Object3D.prototype );
@@ -13650,6 +13403,16 @@ function CubeTexture( images, mapping, wrapS, wrapT, magFilter, minFilter, forma
 	Texture.call( this, images, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy, encoding );
 
 	this.flipY = false;
+
+	// Why CubeTexture._needsFlipEnvMap is necessary:
+	//
+	// By convention -- likely based on the RenderMan spec from the 1990's -- cube maps are specified by WebGL (and three.js)
+	// in a coordinate system in which positive-x is to the right when looking up the positive-z axis -- in other words,
+	// in a left-handed coordinate system. By continuing this convention, preexisting cube maps continued to render correctly.
+
+	// three.js uses a right-handed coordinate system. So environment maps used in three.js appear to have px and nx swapped
+	// and the flag _needsFlipEnvMap controls this conversion. The flip is not required (and thus _needsFlipEnvMap is set to false)
+	// when using WebGLCubeRenderTarget.texture as a cube texture.
 
 	this._needsFlipEnvMap = true;
 
@@ -13676,121 +13439,138 @@ Object.defineProperty( CubeTexture.prototype, 'images', {
 
 } );
 
-function WebGLCubeRenderTarget( size, options, dummy ) {
+class WebGLCubeRenderTarget extends WebGLRenderTarget {
 
-	if ( Number.isInteger( options ) ) {
+	constructor( size, options, dummy ) {
 
-		console.warn( 'THREE.WebGLCubeRenderTarget: constructor signature is now WebGLCubeRenderTarget( size, options )' );
+		if ( Number.isInteger( options ) ) {
 
-		options = dummy;
+			console.warn( 'THREE.WebGLCubeRenderTarget: constructor signature is now WebGLCubeRenderTarget( size, options )' );
+
+			options = dummy;
+
+		}
+
+		super( size, size, options );
+
+		Object.defineProperty( this, 'isWebGLCubeRenderTarget', { value: true } );
+
+		options = options || {};
+
+		this.texture = new CubeTexture( undefined, options.mapping, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding );
+
+		this.texture._needsFlipEnvMap = false;
 
 	}
 
-	WebGLRenderTarget.call( this, size, size, options );
+	fromEquirectangularTexture( renderer, texture ) {
 
-	options = options || {};
+		this.texture.type = texture.type;
+		this.texture.format = RGBAFormat; // see #18859
+		this.texture.encoding = texture.encoding;
 
-	this.texture = new CubeTexture( undefined, options.mapping, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding );
+		this.texture.generateMipmaps = texture.generateMipmaps;
+		this.texture.minFilter = texture.minFilter;
+		this.texture.magFilter = texture.magFilter;
 
-	this.texture._needsFlipEnvMap = false;
+		const shader = {
+
+			uniforms: {
+				tEquirect: { value: null },
+			},
+
+			vertexShader: /* glsl */`
+
+				varying vec3 vWorldDirection;
+
+				vec3 transformDirection( in vec3 dir, in mat4 matrix ) {
+
+					return normalize( ( matrix * vec4( dir, 0.0 ) ).xyz );
+
+				}
+
+				void main() {
+
+					vWorldDirection = transformDirection( position, modelMatrix );
+
+					#include <begin_vertex>
+					#include <project_vertex>
+
+				}
+			`,
+
+			fragmentShader: /* glsl */`
+
+				uniform sampler2D tEquirect;
+
+				varying vec3 vWorldDirection;
+
+				#include <common>
+
+				void main() {
+
+					vec3 direction = normalize( vWorldDirection );
+
+					vec2 sampleUV = equirectUv( direction );
+
+					gl_FragColor = texture2D( tEquirect, sampleUV );
+
+				}
+			`
+		};
+
+		const geometry = new BoxGeometry( 5, 5, 5 );
+
+		const material = new ShaderMaterial( {
+
+			name: 'CubemapFromEquirect',
+
+			uniforms: cloneUniforms( shader.uniforms ),
+			vertexShader: shader.vertexShader,
+			fragmentShader: shader.fragmentShader,
+			side: BackSide,
+			blending: NoBlending
+
+		} );
+
+		material.uniforms.tEquirect.value = texture;
+
+		const mesh = new Mesh( geometry, material );
+
+		const currentMinFilter = texture.minFilter;
+
+		// Avoid blurred poles
+		if ( texture.minFilter === LinearMipmapLinearFilter ) texture.minFilter = LinearFilter;
+
+		const camera = new CubeCamera( 1, 10, this );
+		camera.update( renderer, mesh );
+
+		texture.minFilter = currentMinFilter;
+
+		mesh.geometry.dispose();
+		mesh.material.dispose();
+
+		return this;
+
+	}
+
+	clear( renderer, color, depth, stencil ) {
+
+		const currentRenderTarget = renderer.getRenderTarget();
+
+		for ( let i = 0; i < 6; i ++ ) {
+
+			renderer.setRenderTarget( this, i );
+
+			renderer.clear( color, depth, stencil );
+
+		}
+
+		renderer.setRenderTarget( currentRenderTarget );
+
+	}
 
 }
-
-WebGLCubeRenderTarget.prototype = Object.create( WebGLRenderTarget.prototype );
-WebGLCubeRenderTarget.prototype.constructor = WebGLCubeRenderTarget;
-
-WebGLCubeRenderTarget.prototype.isWebGLCubeRenderTarget = true;
-
-WebGLCubeRenderTarget.prototype.fromEquirectangularTexture = function ( renderer, texture ) {
-
-	this.texture.type = texture.type;
-	this.texture.format = RGBAFormat; // see #18859
-	this.texture.encoding = texture.encoding;
-
-	this.texture.generateMipmaps = texture.generateMipmaps;
-	this.texture.minFilter = texture.minFilter;
-	this.texture.magFilter = texture.magFilter;
-
-	const shader = {
-
-		uniforms: {
-			tEquirect: { value: null },
-		},
-
-		vertexShader: /* glsl */`
-
-			varying vec3 vWorldDirection;
-
-			vec3 transformDirection( in vec3 dir, in mat4 matrix ) {
-
-				return normalize( ( matrix * vec4( dir, 0.0 ) ).xyz );
-
-			}
-
-			void main() {
-
-				vWorldDirection = transformDirection( position, modelMatrix );
-
-				#include <begin_vertex>
-				#include <project_vertex>
-
-			}
-		`,
-
-		fragmentShader: /* glsl */`
-
-			uniform sampler2D tEquirect;
-
-			varying vec3 vWorldDirection;
-
-			#include <common>
-
-			void main() {
-
-				vec3 direction = normalize( vWorldDirection );
-
-				vec2 sampleUV = equirectUv( direction );
-
-				gl_FragColor = texture2D( tEquirect, sampleUV );
-
-			}
-		`
-	};
-
-	const geometry = new BoxBufferGeometry( 5, 5, 5 );
-
-	const material = new ShaderMaterial( {
-
-		name: 'CubemapFromEquirect',
-
-		uniforms: cloneUniforms( shader.uniforms ),
-		vertexShader: shader.vertexShader,
-		fragmentShader: shader.fragmentShader,
-		side: BackSide,
-		blending: NoBlending
-
-	} );
-
-	material.uniforms.tEquirect.value = texture;
-
-	const mesh = new Mesh( geometry, material );
-
-	const currentMinFilter = texture.minFilter;
-
-	// Avoid blurred poles
-	if ( texture.minFilter === LinearMipmapLinearFilter ) texture.minFilter = LinearFilter;
-
-	const camera = new CubeCamera( 1, 10, this );
-	camera.update( renderer, mesh );
-
-	texture.minFilter = currentMinFilter;
-
-	mesh.geometry.dispose();
-	mesh.material.dispose();
-
-	return this;
-
-};
 
 function DataTexture( data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter, anisotropy, encoding ) {
 
@@ -14061,7 +13841,23 @@ function WebGLAttributes( gl, capabilities ) {
 
 		} else if ( array instanceof Uint16Array ) {
 
-			type = 5123;
+			if ( attribute.isFloat16BufferAttribute ) {
+
+				if ( isWebGL2 ) {
+
+					type = 5131;
+
+				} else {
+
+					console.warn( 'THREE.WebGLAttributes: Usage of Float16BufferAttribute requires WebGL2.' );
+
+				}
+
+			} else {
+
+				type = 5123;
+
+			}
 
 		} else if ( array instanceof Int16Array ) {
 
@@ -14157,7 +13953,7 @@ function WebGLAttributes( gl, capabilities ) {
 
 		if ( attribute.isGLBufferAttribute ) {
 
-			var cached = buffers.get( attribute );
+			const cached = buffers.get( attribute );
 
 			if ( ! cached || cached.version < attribute.version ) {
 
@@ -14202,12 +13998,12 @@ function WebGLAttributes( gl, capabilities ) {
 
 }
 
-class PlaneBufferGeometry extends BufferGeometry {
+class PlaneGeometry extends BufferGeometry {
 
-	constructor( width, height, widthSegments, heightSegments ) {
+	constructor( width = 1, height = 1, widthSegments = 1, heightSegments = 1 ) {
 
 		super();
-		this.type = 'PlaneBufferGeometry';
+		this.type = 'PlaneGeometry';
 
 		this.parameters = {
 			width: width,
@@ -14216,14 +14012,11 @@ class PlaneBufferGeometry extends BufferGeometry {
 			heightSegments: heightSegments
 		};
 
-		width = width || 1;
-		height = height || 1;
-
 		const width_half = width / 2;
 		const height_half = height / 2;
 
-		const gridX = Math.floor( widthSegments ) || 1;
-		const gridY = Math.floor( heightSegments ) || 1;
+		const gridX = Math.floor( widthSegments );
+		const gridY = Math.floor( heightSegments );
 
 		const gridX1 = gridX + 1;
 		const gridY1 = gridY + 1;
@@ -14231,14 +14024,12 @@ class PlaneBufferGeometry extends BufferGeometry {
 		const segment_width = width / gridX;
 		const segment_height = height / gridY;
 
-		// buffers
+		//
 
 		const indices = [];
 		const vertices = [];
 		const normals = [];
 		const uvs = [];
-
-		// generate vertices, normals and uvs
 
 		for ( let iy = 0; iy < gridY1; iy ++ ) {
 
@@ -14259,8 +14050,6 @@ class PlaneBufferGeometry extends BufferGeometry {
 
 		}
 
-		// indices
-
 		for ( let iy = 0; iy < gridY; iy ++ ) {
 
 			for ( let ix = 0; ix < gridX; ix ++ ) {
@@ -14270,16 +14059,12 @@ class PlaneBufferGeometry extends BufferGeometry {
 				const c = ( ix + 1 ) + gridX1 * ( iy + 1 );
 				const d = ( ix + 1 ) + gridX1 * iy;
 
-				// faces
-
 				indices.push( a, b, d );
 				indices.push( b, c, d );
 
 			}
 
 		}
-
-		// build geometry
 
 		this.setIndex( indices );
 		this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
@@ -15247,7 +15032,7 @@ function WebGLBackground( renderer, cubemaps, state, objects, premultipliedAlpha
 			if ( boxMesh === undefined ) {
 
 				boxMesh = new Mesh(
-					new BoxBufferGeometry( 1, 1, 1 ),
+					new BoxGeometry( 1, 1, 1 ),
 					new ShaderMaterial( {
 						name: 'BackgroundCubeMaterial',
 						uniforms: cloneUniforms( ShaderLib.cube.uniforms ),
@@ -15315,7 +15100,7 @@ function WebGLBackground( renderer, cubemaps, state, objects, premultipliedAlpha
 			if ( planeMesh === undefined ) {
 
 				planeMesh = new Mesh(
-					new PlaneBufferGeometry( 2, 2 ),
+					new PlaneGeometry( 2, 2 ),
 					new ShaderMaterial( {
 						name: 'BackgroundMaterial',
 						uniforms: cloneUniforms( ShaderLib.background.uniforms ),
@@ -15388,10 +15173,10 @@ function WebGLBackground( renderer, cubemaps, state, objects, premultipliedAlpha
 			return clearColor;
 
 		},
-		setClearColor: function ( color, alpha ) {
+		setClearColor: function ( color, alpha = 1 ) {
 
 			clearColor.set( color );
-			clearAlpha = alpha !== undefined ? alpha : 1;
+			clearAlpha = alpha;
 			setClear( clearColor, clearAlpha );
 
 		},
@@ -15583,7 +15368,7 @@ function WebGLBindingStates( gl, extensions, attributes, capabilities ) {
 		const cachedAttributes = currentState.attributes;
 		const geometryAttributes = geometry.attributes;
 
-		if ( Object.keys( cachedAttributes ).length !== Object.keys( geometryAttributes ).length ) return true;
+		let attributesNum = 0;
 
 		for ( const key in geometryAttributes ) {
 
@@ -15596,7 +15381,11 @@ function WebGLBindingStates( gl, extensions, attributes, capabilities ) {
 
 			if ( cachedAttribute.data !== geometryAttribute.data ) return true;
 
+			attributesNum ++;
+
 		}
+
+		if ( currentState.attributesNum !== attributesNum ) return true;
 
 		if ( currentState.index !== index ) return true;
 
@@ -15608,6 +15397,7 @@ function WebGLBindingStates( gl, extensions, attributes, capabilities ) {
 
 		const cache = {};
 		const attributes = geometry.attributes;
+		let attributesNum = 0;
 
 		for ( const key in attributes ) {
 
@@ -15624,9 +15414,12 @@ function WebGLBindingStates( gl, extensions, attributes, capabilities ) {
 
 			cache[ key ] = data;
 
+			attributesNum ++;
+
 		}
 
 		currentState.attributes = cache;
+		currentState.attributesNum = attributesNum;
 
 		currentState.index = index;
 
@@ -16369,7 +16162,6 @@ function WebGLCubeMaps( renderer ) {
 
 						const currentRenderList = renderer.getRenderList();
 						const currentRenderTarget = renderer.getRenderTarget();
-						const currentRenderState = renderer.getRenderState();
 
 						const renderTarget = new WebGLCubeRenderTarget( image.height / 2 );
 						renderTarget.fromEquirectangularTexture( renderer, texture );
@@ -16377,7 +16169,8 @@ function WebGLCubeMaps( renderer ) {
 
 						renderer.setRenderTarget( currentRenderTarget );
 						renderer.setRenderList( currentRenderList );
-						renderer.setRenderState( currentRenderState );
+
+						texture.addEventListener( 'dispose', onTextureDispose );
 
 						return mapTextureMapping( renderTarget.texture, texture.mapping );
 
@@ -16399,6 +16192,23 @@ function WebGLCubeMaps( renderer ) {
 
 	}
 
+	function onTextureDispose( event ) {
+
+		const texture = event.target;
+
+		texture.removeEventListener( 'dispose', onTextureDispose );
+
+		const cubemap = cubemaps.get( texture );
+
+		if ( cubemap !== undefined ) {
+
+			cubemaps.delete( texture );
+			cubemap.dispose();
+
+		}
+
+	}
+
 	function dispose() {
 
 		cubemaps = new WeakMap();
@@ -16416,56 +16226,88 @@ function WebGLExtensions( gl ) {
 
 	const extensions = {};
 
+	function getExtension( name ) {
+
+		if ( extensions[ name ] !== undefined ) {
+
+			return extensions[ name ];
+
+		}
+
+		let extension;
+
+		switch ( name ) {
+
+			case 'WEBGL_depth_texture':
+				extension = gl.getExtension( 'WEBGL_depth_texture' ) || gl.getExtension( 'MOZ_WEBGL_depth_texture' ) || gl.getExtension( 'WEBKIT_WEBGL_depth_texture' );
+				break;
+
+			case 'EXT_texture_filter_anisotropic':
+				extension = gl.getExtension( 'EXT_texture_filter_anisotropic' ) || gl.getExtension( 'MOZ_EXT_texture_filter_anisotropic' ) || gl.getExtension( 'WEBKIT_EXT_texture_filter_anisotropic' );
+				break;
+
+			case 'WEBGL_compressed_texture_s3tc':
+				extension = gl.getExtension( 'WEBGL_compressed_texture_s3tc' ) || gl.getExtension( 'MOZ_WEBGL_compressed_texture_s3tc' ) || gl.getExtension( 'WEBKIT_WEBGL_compressed_texture_s3tc' );
+				break;
+
+			case 'WEBGL_compressed_texture_pvrtc':
+				extension = gl.getExtension( 'WEBGL_compressed_texture_pvrtc' ) || gl.getExtension( 'WEBKIT_WEBGL_compressed_texture_pvrtc' );
+				break;
+
+			default:
+				extension = gl.getExtension( name );
+
+		}
+
+		extensions[ name ] = extension;
+
+		return extension;
+
+	}
+
 	return {
 
 		has: function ( name ) {
 
-			if ( extensions[ name ] !== undefined ) {
+			return getExtension( name ) !== null;
 
-				return extensions[ name ] !== null;
+		},
 
-			}
+		init: function ( capabilities ) {
 
-			let extension;
+			if ( capabilities.isWebGL2 ) {
 
-			switch ( name ) {
+				getExtension( 'EXT_color_buffer_float' );
 
-				case 'WEBGL_depth_texture':
-					extension = gl.getExtension( 'WEBGL_depth_texture' ) || gl.getExtension( 'MOZ_WEBGL_depth_texture' ) || gl.getExtension( 'WEBKIT_WEBGL_depth_texture' );
-					break;
+			} else {
 
-				case 'EXT_texture_filter_anisotropic':
-					extension = gl.getExtension( 'EXT_texture_filter_anisotropic' ) || gl.getExtension( 'MOZ_EXT_texture_filter_anisotropic' ) || gl.getExtension( 'WEBKIT_EXT_texture_filter_anisotropic' );
-					break;
-
-				case 'WEBGL_compressed_texture_s3tc':
-					extension = gl.getExtension( 'WEBGL_compressed_texture_s3tc' ) || gl.getExtension( 'MOZ_WEBGL_compressed_texture_s3tc' ) || gl.getExtension( 'WEBKIT_WEBGL_compressed_texture_s3tc' );
-					break;
-
-				case 'WEBGL_compressed_texture_pvrtc':
-					extension = gl.getExtension( 'WEBGL_compressed_texture_pvrtc' ) || gl.getExtension( 'WEBKIT_WEBGL_compressed_texture_pvrtc' );
-					break;
-
-				default:
-					extension = gl.getExtension( name );
+				getExtension( 'WEBGL_depth_texture' );
+				getExtension( 'OES_texture_float' );
+				getExtension( 'OES_texture_half_float' );
+				getExtension( 'OES_texture_half_float_linear' );
+				getExtension( 'OES_standard_derivatives' );
+				getExtension( 'OES_element_index_uint' );
+				getExtension( 'OES_vertex_array_object' );
+				getExtension( 'ANGLE_instanced_arrays' );
 
 			}
 
-			extensions[ name ] = extension;
-
-			return extension !== null;
+			getExtension( 'OES_texture_float_linear' );
+			getExtension( 'EXT_color_buffer_half_float' );
 
 		},
 
 		get: function ( name ) {
 
-			if ( ! this.has( name ) ) {
+			const extension = getExtension( name );
+
+			if ( extension === null ) {
 
 				console.warn( 'THREE.WebGLRenderer: ' + name + ' extension not supported.' );
 
 			}
 
-			return extensions[ name ];
+			return extension;
 
 		}
 
@@ -16475,36 +16317,35 @@ function WebGLExtensions( gl ) {
 
 function WebGLGeometries( gl, attributes, info, bindingStates ) {
 
-	const geometries = new WeakMap();
+	const geometries = {};
 	const wireframeAttributes = new WeakMap();
 
 	function onGeometryDispose( event ) {
 
 		const geometry = event.target;
-		const buffergeometry = geometries.get( geometry );
 
-		if ( buffergeometry.index !== null ) {
+		if ( geometry.index !== null ) {
 
-			attributes.remove( buffergeometry.index );
+			attributes.remove( geometry.index );
 
 		}
 
-		for ( const name in buffergeometry.attributes ) {
+		for ( const name in geometry.attributes ) {
 
-			attributes.remove( buffergeometry.attributes[ name ] );
+			attributes.remove( geometry.attributes[ name ] );
 
 		}
 
 		geometry.removeEventListener( 'dispose', onGeometryDispose );
 
-		geometries.delete( geometry );
+		delete geometries[ geometry.id ];
 
-		const attribute = wireframeAttributes.get( buffergeometry );
+		const attribute = wireframeAttributes.get( geometry );
 
 		if ( attribute ) {
 
 			attributes.remove( attribute );
-			wireframeAttributes.delete( buffergeometry );
+			wireframeAttributes.delete( geometry );
 
 		}
 
@@ -16524,33 +16365,15 @@ function WebGLGeometries( gl, attributes, info, bindingStates ) {
 
 	function get( object, geometry ) {
 
-		let buffergeometry = geometries.get( geometry );
-
-		if ( buffergeometry ) return buffergeometry;
+		if ( geometries[ geometry.id ] === true ) return geometry;
 
 		geometry.addEventListener( 'dispose', onGeometryDispose );
 
-		if ( geometry.isBufferGeometry ) {
-
-			buffergeometry = geometry;
-
-		} else if ( geometry.isGeometry ) {
-
-			if ( geometry._bufferGeometry === undefined ) {
-
-				geometry._bufferGeometry = new BufferGeometry().setFromObject( object );
-
-			}
-
-			buffergeometry = geometry._bufferGeometry;
-
-		}
-
-		geometries.set( geometry, buffergeometry );
+		geometries[ geometry.id ] = true;
 
 		info.memory.geometries ++;
 
-		return buffergeometry;
+		return geometry;
 
 	}
 
@@ -16934,13 +16757,13 @@ function WebGLMorphtargets( gl ) {
 
 			} else {
 
-				if ( morphTargets && geometry.getAttribute( 'morphTarget' + i ) !== undefined ) {
+				if ( morphTargets && geometry.hasAttribute( 'morphTarget' + i ) === true ) {
 
 					geometry.deleteAttribute( 'morphTarget' + i );
 
 				}
 
-				if ( morphNormals && geometry.getAttribute( 'morphNormal' + i ) !== undefined ) {
+				if ( morphNormals && geometry.hasAttribute( 'morphNormal' + i ) === true ) {
 
 					geometry.deleteAttribute( 'morphNormal' + i );
 
@@ -16985,12 +16808,6 @@ function WebGLObjects( gl, geometries, attributes, info ) {
 
 		if ( updateMap.get( buffergeometry ) !== frame ) {
 
-			if ( geometry.isGeometry ) {
-
-				buffergeometry.updateFromObject( object );
-
-			}
-
 			geometries.update( buffergeometry );
 
 			updateMap.set( buffergeometry, frame );
@@ -16998,6 +16815,12 @@ function WebGLObjects( gl, geometries, attributes, info ) {
 		}
 
 		if ( object.isInstancedMesh ) {
+
+			if ( object.hasEventListener( 'dispose', onInstancedMeshDispose ) === false ) {
+
+				object.addEventListener( 'dispose', onInstancedMeshDispose );
+
+			}
 
 			attributes.update( object.instanceMatrix, 34962 );
 
@@ -17019,6 +16842,18 @@ function WebGLObjects( gl, geometries, attributes, info ) {
 
 	}
 
+	function onInstancedMeshDispose( event ) {
+
+		const instancedMesh = event.target;
+
+		instancedMesh.removeEventListener( 'dispose', onInstancedMeshDispose );
+
+		attributes.remove( instancedMesh.instanceMatrix );
+
+		if ( instancedMesh.instanceColor !== null ) attributes.remove( instancedMesh.instanceColor );
+
+	}
+
 	return {
 
 		update: update,
@@ -17028,11 +16863,11 @@ function WebGLObjects( gl, geometries, attributes, info ) {
 
 }
 
-function DataTexture2DArray( data, width, height, depth ) {
+function DataTexture2DArray( data = null, width = 1, height = 1, depth = 1 ) {
 
 	Texture.call( this, null );
 
-	this.image = { data: data || null, width: width || 1, height: height || 1, depth: depth || 1 };
+	this.image = { data, width, height, depth };
 
 	this.magFilter = NearestFilter;
 	this.minFilter = NearestFilter;
@@ -17050,7 +16885,7 @@ DataTexture2DArray.prototype = Object.create( Texture.prototype );
 DataTexture2DArray.prototype.constructor = DataTexture2DArray;
 DataTexture2DArray.prototype.isDataTexture2DArray = true;
 
-function DataTexture3D( data, width, height, depth ) {
+function DataTexture3D( data = null, width = 1, height = 1, depth = 1 ) {
 
 	// We're going to add .setXXX() methods for setting properties later.
 	// Users can still set in DataTexture3D directly.
@@ -17062,7 +16897,7 @@ function DataTexture3D( data, width, height, depth ) {
 
 	Texture.call( this, null );
 
-	this.image = { data: data || null, width: width || 1, height: height || 1, depth: depth || 1 };
+	this.image = { data, width, height, depth };
 
 	this.magFilter = NearestFilter;
 	this.minFilter = NearestFilter;
@@ -17827,7 +17662,7 @@ StructuredUniform.prototype.setValue = function ( gl, value, textures ) {
 
 // Parser - builds up the property tree from the path strings
 
-const RePathPart = /([\w\d_]+)(\])?(\[|\.)?/g;
+const RePathPart = /(\w+)(\])?(\[|\.)?/g;
 
 // extracts
 // 	- the identifier (member name or array index)
@@ -18233,19 +18068,19 @@ function loopReplacer( match, start, end, snippet ) {
 
 function generatePrecision( parameters ) {
 
-	let precisionstring = "precision " + parameters.precision + " float;\nprecision " + parameters.precision + " int;";
+	let precisionstring = 'precision ' + parameters.precision + ' float;\nprecision ' + parameters.precision + ' int;';
 
-	if ( parameters.precision === "highp" ) {
+	if ( parameters.precision === 'highp' ) {
 
-		precisionstring += "\n#define HIGH_PRECISION";
+		precisionstring += '\n#define HIGH_PRECISION';
 
-	} else if ( parameters.precision === "mediump" ) {
+	} else if ( parameters.precision === 'mediump' ) {
 
-		precisionstring += "\n#define MEDIUM_PRECISION";
+		precisionstring += '\n#define MEDIUM_PRECISION';
 
-	} else if ( parameters.precision === "lowp" ) {
+	} else if ( parameters.precision === 'lowp' ) {
 
-		precisionstring += "\n#define LOW_PRECISION";
+		precisionstring += '\n#define LOW_PRECISION';
 
 	}
 
@@ -18375,7 +18210,7 @@ function WebGLProgram( renderer, cacheKey, parameters, bindingStates ) {
 	const program = gl.createProgram();
 
 	let prefixVertex, prefixFragment;
-	let versionString = parameters.glslVersion ? '#version ' + parameters.glslVersion + "\n" : '';
+	let versionString = parameters.glslVersion ? '#version ' + parameters.glslVersion + '\n' : '';
 
 	if ( parameters.isRawShaderMaterial ) {
 
@@ -18854,19 +18689,19 @@ function WebGLPrograms( renderer, cubemaps, extensions, capabilities, bindingSta
 	};
 
 	const parameterNames = [
-		"precision", "isWebGL2", "supportsVertexTextures", "outputEncoding", "instancing", "instancingColor",
-		"map", "mapEncoding", "matcap", "matcapEncoding", "envMap", "envMapMode", "envMapEncoding", "envMapCubeUV",
-		"lightMap", "lightMapEncoding", "aoMap", "emissiveMap", "emissiveMapEncoding", "bumpMap", "normalMap", "objectSpaceNormalMap", "tangentSpaceNormalMap", "clearcoatMap", "clearcoatRoughnessMap", "clearcoatNormalMap", "displacementMap", "specularMap",
-		"roughnessMap", "metalnessMap", "gradientMap",
-		"alphaMap", "combine", "vertexColors", "vertexTangents", "vertexUvs", "uvsVertexOnly", "fog", "useFog", "fogExp2",
-		"flatShading", "sizeAttenuation", "logarithmicDepthBuffer", "skinning",
-		"maxBones", "useVertexTexture", "morphTargets", "morphNormals",
-		"maxMorphTargets", "maxMorphNormals", "premultipliedAlpha",
-		"numDirLights", "numPointLights", "numSpotLights", "numHemiLights", "numRectAreaLights",
-		"numDirLightShadows", "numPointLightShadows", "numSpotLightShadows",
-		"shadowMapEnabled", "shadowMapType", "toneMapping", 'physicallyCorrectLights',
-		"alphaTest", "doubleSided", "flipSided", "numClippingPlanes", "numClipIntersection", "depthPacking", "dithering",
-		"sheen", "transmissionMap"
+		'precision', 'isWebGL2', 'supportsVertexTextures', 'outputEncoding', 'instancing', 'instancingColor',
+		'map', 'mapEncoding', 'matcap', 'matcapEncoding', 'envMap', 'envMapMode', 'envMapEncoding', 'envMapCubeUV',
+		'lightMap', 'lightMapEncoding', 'aoMap', 'emissiveMap', 'emissiveMapEncoding', 'bumpMap', 'normalMap', 'objectSpaceNormalMap', 'tangentSpaceNormalMap', 'clearcoatMap', 'clearcoatRoughnessMap', 'clearcoatNormalMap', 'displacementMap', 'specularMap',
+		'roughnessMap', 'metalnessMap', 'gradientMap',
+		'alphaMap', 'combine', 'vertexColors', 'vertexTangents', 'vertexUvs', 'uvsVertexOnly', 'fog', 'useFog', 'fogExp2',
+		'flatShading', 'sizeAttenuation', 'logarithmicDepthBuffer', 'skinning',
+		'maxBones', 'useVertexTexture', 'morphTargets', 'morphNormals',
+		'maxMorphTargets', 'maxMorphNormals', 'premultipliedAlpha',
+		'numDirLights', 'numPointLights', 'numSpotLights', 'numHemiLights', 'numRectAreaLights',
+		'numDirLightShadows', 'numPointLightShadows', 'numSpotLightShadows',
+		'shadowMapEnabled', 'shadowMapType', 'toneMapping', 'physicallyCorrectLights',
+		'alphaTest', 'doubleSided', 'flipSided', 'numClippingPlanes', 'numClipIntersection', 'depthPacking', 'dithering',
+		'sheen', 'transmissionMap'
 	];
 
 	function getMaxBones( object ) {
@@ -18909,18 +18744,18 @@ function WebGLPrograms( renderer, cubemaps, extensions, capabilities, bindingSta
 
 		let encoding;
 
-		if ( ! map ) {
-
-			encoding = LinearEncoding;
-
-		} else if ( map.isTexture ) {
+		if ( map && map.isTexture ) {
 
 			encoding = map.encoding;
 
-		} else if ( map.isWebGLRenderTarget ) {
+		} else if ( map && map.isWebGLRenderTarget ) {
 
-			console.warn( "THREE.WebGLPrograms.getTextureEncodingFromMap: don't use render targets as textures. Use their .texture property instead." );
+			console.warn( 'THREE.WebGLPrograms.getTextureEncodingFromMap: don\'t use render targets as textures. Use their .texture property instead.' );
 			encoding = map.texture.encoding;
+
+		} else {
+
+			encoding = LinearEncoding;
 
 		}
 
@@ -19630,7 +19465,7 @@ function shadowCastingLightsFirst( lightA, lightB ) {
 
 }
 
-function WebGLLights() {
+function WebGLLights( extensions, capabilities ) {
 
 	const cache = new UniformsCache();
 
@@ -19679,7 +19514,7 @@ function WebGLLights() {
 	const matrix4 = new Matrix4();
 	const matrix42 = new Matrix4();
 
-	function setup( lights, shadows, camera ) {
+	function setup( lights ) {
 
 		let r = 0, g = 0, b = 0;
 
@@ -19694,8 +19529,6 @@ function WebGLLights() {
 		let numDirectionalShadows = 0;
 		let numPointShadows = 0;
 		let numSpotShadows = 0;
-
-		const viewMatrix = camera.matrixWorldInverse;
 
 		lights.sort( shadowCastingLightsFirst );
 
@@ -19728,10 +19561,6 @@ function WebGLLights() {
 				const uniforms = cache.get( light );
 
 				uniforms.color.copy( light.color ).multiplyScalar( light.intensity );
-				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
-				vector3.setFromMatrixPosition( light.target.matrixWorld );
-				uniforms.direction.sub( vector3 );
-				uniforms.direction.transformDirection( viewMatrix );
 
 				if ( light.castShadow ) {
 
@@ -19761,15 +19590,9 @@ function WebGLLights() {
 				const uniforms = cache.get( light );
 
 				uniforms.position.setFromMatrixPosition( light.matrixWorld );
-				uniforms.position.applyMatrix4( viewMatrix );
 
 				uniforms.color.copy( color ).multiplyScalar( intensity );
 				uniforms.distance = distance;
-
-				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
-				vector3.setFromMatrixPosition( light.target.matrixWorld );
-				uniforms.direction.sub( vector3 );
-				uniforms.direction.transformDirection( viewMatrix );
 
 				uniforms.coneCos = Math.cos( light.angle );
 				uniforms.penumbraCos = Math.cos( light.angle * ( 1 - light.penumbra ) );
@@ -19808,23 +19631,8 @@ function WebGLLights() {
 				// (b) intensity is the brightness of the light
 				uniforms.color.copy( color ).multiplyScalar( intensity );
 
-				uniforms.position.setFromMatrixPosition( light.matrixWorld );
-				uniforms.position.applyMatrix4( viewMatrix );
-
-				// extract local rotation of light to derive width/height half vectors
-				matrix42.identity();
-				matrix4.copy( light.matrixWorld );
-				matrix4.premultiply( viewMatrix );
-				matrix42.extractRotation( matrix4 );
-
 				uniforms.halfWidth.set( light.width * 0.5, 0.0, 0.0 );
 				uniforms.halfHeight.set( 0.0, light.height * 0.5, 0.0 );
-
-				uniforms.halfWidth.applyMatrix4( matrix42 );
-				uniforms.halfHeight.applyMatrix4( matrix42 );
-
-				// TODO (abelnation): RectAreaLight distance?
-				// uniforms.distance = distance;
 
 				state.rectArea[ rectAreaLength ] = uniforms;
 
@@ -19833,9 +19641,6 @@ function WebGLLights() {
 			} else if ( light.isPointLight ) {
 
 				const uniforms = cache.get( light );
-
-				uniforms.position.setFromMatrixPosition( light.matrixWorld );
-				uniforms.position.applyMatrix4( viewMatrix );
 
 				uniforms.color.copy( light.color ).multiplyScalar( light.intensity );
 				uniforms.distance = light.distance;
@@ -19870,10 +19675,6 @@ function WebGLLights() {
 
 				const uniforms = cache.get( light );
 
-				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
-				uniforms.direction.transformDirection( viewMatrix );
-				uniforms.direction.normalize();
-
 				uniforms.skyColor.copy( light.color ).multiplyScalar( intensity );
 				uniforms.groundColor.copy( light.groundColor ).multiplyScalar( intensity );
 
@@ -19887,8 +19688,34 @@ function WebGLLights() {
 
 		if ( rectAreaLength > 0 ) {
 
-			state.rectAreaLTC1 = UniformsLib.LTC_1;
-			state.rectAreaLTC2 = UniformsLib.LTC_2;
+			if ( capabilities.isWebGL2 ) {
+
+				// WebGL 2
+
+				state.rectAreaLTC1 = UniformsLib.LTC_FLOAT_1;
+				state.rectAreaLTC2 = UniformsLib.LTC_FLOAT_2;
+
+			} else {
+
+				// WebGL 1
+
+				if ( extensions.has( 'OES_texture_float_linear' ) === true ) {
+
+					state.rectAreaLTC1 = UniformsLib.LTC_FLOAT_1;
+					state.rectAreaLTC2 = UniformsLib.LTC_FLOAT_2;
+
+				} else if ( extensions.has( 'OES_texture_half_float_linear' ) === true ) {
+
+					state.rectAreaLTC1 = UniformsLib.LTC_HALF_1;
+					state.rectAreaLTC2 = UniformsLib.LTC_HALF_2;
+
+				} else {
+
+					console.error( 'THREE.WebGLRenderer: Unable to use RectAreaLight. Missing WebGL extensions.' );
+
+				}
+
+			}
 
 		}
 
@@ -19939,16 +19766,102 @@ function WebGLLights() {
 
 	}
 
+	function setupView( lights, camera ) {
+
+		let directionalLength = 0;
+		let pointLength = 0;
+		let spotLength = 0;
+		let rectAreaLength = 0;
+		let hemiLength = 0;
+
+		const viewMatrix = camera.matrixWorldInverse;
+
+		for ( let i = 0, l = lights.length; i < l; i ++ ) {
+
+			const light = lights[ i ];
+
+			if ( light.isDirectionalLight ) {
+
+				const uniforms = state.directional[ directionalLength ];
+
+				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
+				vector3.setFromMatrixPosition( light.target.matrixWorld );
+				uniforms.direction.sub( vector3 );
+				uniforms.direction.transformDirection( viewMatrix );
+
+				directionalLength ++;
+
+			} else if ( light.isSpotLight ) {
+
+				const uniforms = state.spot[ spotLength ];
+
+				uniforms.position.setFromMatrixPosition( light.matrixWorld );
+				uniforms.position.applyMatrix4( viewMatrix );
+
+				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
+				vector3.setFromMatrixPosition( light.target.matrixWorld );
+				uniforms.direction.sub( vector3 );
+				uniforms.direction.transformDirection( viewMatrix );
+
+				spotLength ++;
+
+			} else if ( light.isRectAreaLight ) {
+
+				const uniforms = state.rectArea[ rectAreaLength ];
+
+				uniforms.position.setFromMatrixPosition( light.matrixWorld );
+				uniforms.position.applyMatrix4( viewMatrix );
+
+				// extract local rotation of light to derive width/height half vectors
+				matrix42.identity();
+				matrix4.copy( light.matrixWorld );
+				matrix4.premultiply( viewMatrix );
+				matrix42.extractRotation( matrix4 );
+
+				uniforms.halfWidth.set( light.width * 0.5, 0.0, 0.0 );
+				uniforms.halfHeight.set( 0.0, light.height * 0.5, 0.0 );
+
+				uniforms.halfWidth.applyMatrix4( matrix42 );
+				uniforms.halfHeight.applyMatrix4( matrix42 );
+
+				rectAreaLength ++;
+
+			} else if ( light.isPointLight ) {
+
+				const uniforms = state.point[ pointLength ];
+
+				uniforms.position.setFromMatrixPosition( light.matrixWorld );
+				uniforms.position.applyMatrix4( viewMatrix );
+
+				pointLength ++;
+
+			} else if ( light.isHemisphereLight ) {
+
+				const uniforms = state.hemi[ hemiLength ];
+
+				uniforms.direction.setFromMatrixPosition( light.matrixWorld );
+				uniforms.direction.transformDirection( viewMatrix );
+				uniforms.direction.normalize();
+
+				hemiLength ++;
+
+			}
+
+		}
+
+	}
+
 	return {
 		setup: setup,
+		setupView: setupView,
 		state: state
 	};
 
 }
 
-function WebGLRenderState() {
+function WebGLRenderState( extensions, capabilities ) {
 
-	const lights = new WebGLLights();
+	const lights = new WebGLLights( extensions, capabilities );
 
 	const lightsArray = [];
 	const shadowsArray = [];
@@ -19972,9 +19885,15 @@ function WebGLRenderState() {
 
 	}
 
-	function setupLights( camera ) {
+	function setupLights() {
 
-		lights.setup( lightsArray, shadowsArray, camera );
+		lights.setup( lightsArray );
+
+	}
+
+	function setupLightsView( camera ) {
+
+		lights.setupView( lightsArray, camera );
 
 	}
 
@@ -19989,6 +19908,7 @@ function WebGLRenderState() {
 		init: init,
 		state: state,
 		setupLights: setupLights,
+		setupLightsView: setupLightsView,
 
 		pushLight: pushLight,
 		pushShadow: pushShadow
@@ -19996,30 +19916,30 @@ function WebGLRenderState() {
 
 }
 
-function WebGLRenderStates() {
+function WebGLRenderStates( extensions, capabilities ) {
 
 	let renderStates = new WeakMap();
 
-	function get( scene, camera ) {
+	function get( scene, renderCallDepth = 0 ) {
 
 		let renderState;
 
 		if ( renderStates.has( scene ) === false ) {
 
-			renderState = new WebGLRenderState();
-			renderStates.set( scene, new WeakMap() );
-			renderStates.get( scene ).set( camera, renderState );
+			renderState = new WebGLRenderState( extensions, capabilities );
+			renderStates.set( scene, [] );
+			renderStates.get( scene ).push( renderState );
 
 		} else {
 
-			if ( renderStates.get( scene ).has( camera ) === false ) {
+			if ( renderCallDepth >= renderStates.get( scene ).length ) {
 
-				renderState = new WebGLRenderState();
-				renderStates.get( scene ).set( camera, renderState );
+				renderState = new WebGLRenderState( extensions, capabilities );
+				renderStates.get( scene ).push( renderState );
 
 			} else {
 
-				renderState = renderStates.get( scene ).get( camera );
+				renderState = renderStates.get( scene )[ renderCallDepth ];
 
 			}
 
@@ -20193,7 +20113,7 @@ MeshDistanceMaterial.prototype.copy = function ( source ) {
 
 };
 
-var vsm_frag = "uniform sampler2D shadow_pass;\nuniform vec2 resolution;\nuniform float radius;\n#include <packing>\nvoid main() {\n\tfloat mean = 0.0;\n\tfloat squared_mean = 0.0;\n\tfloat depth = unpackRGBAToDepth( texture2D( shadow_pass, ( gl_FragCoord.xy ) / resolution ) );\n\tfor ( float i = -1.0; i < 1.0 ; i += SAMPLE_RATE) {\n\t\t#ifdef HORIZONAL_PASS\n\t\t\tvec2 distribution = unpackRGBATo2Half( texture2D( shadow_pass, ( gl_FragCoord.xy + vec2( i, 0.0 ) * radius ) / resolution ) );\n\t\t\tmean += distribution.x;\n\t\t\tsquared_mean += distribution.y * distribution.y + distribution.x * distribution.x;\n\t\t#else\n\t\t\tfloat depth = unpackRGBAToDepth( texture2D( shadow_pass, ( gl_FragCoord.xy + vec2( 0.0, i ) * radius ) / resolution ) );\n\t\t\tmean += depth;\n\t\t\tsquared_mean += depth * depth;\n\t\t#endif\n\t}\n\tmean = mean * HALF_SAMPLE_RATE;\n\tsquared_mean = squared_mean * HALF_SAMPLE_RATE;\n\tfloat std_dev = sqrt( squared_mean - mean * mean );\n\tgl_FragColor = pack2HalfToRGBA( vec2( mean, std_dev ) );\n}";
+var vsm_frag = "uniform sampler2D shadow_pass;\nuniform vec2 resolution;\nuniform float radius;\n#include <packing>\nvoid main() {\n\tfloat mean = 0.0;\n\tfloat squared_mean = 0.0;\n\tfloat depth = unpackRGBAToDepth( texture2D( shadow_pass, ( gl_FragCoord.xy ) / resolution ) );\n\tfor ( float i = -1.0; i < 1.0 ; i += SAMPLE_RATE) {\n\t\t#ifdef HORIZONTAL_PASS\n\t\t\tvec2 distribution = unpackRGBATo2Half( texture2D( shadow_pass, ( gl_FragCoord.xy + vec2( i, 0.0 ) * radius ) / resolution ) );\n\t\t\tmean += distribution.x;\n\t\t\tsquared_mean += distribution.y * distribution.y + distribution.x * distribution.x;\n\t\t#else\n\t\t\tfloat depth = unpackRGBAToDepth( texture2D( shadow_pass, ( gl_FragCoord.xy + vec2( 0.0, i ) * radius ) / resolution ) );\n\t\t\tmean += depth;\n\t\t\tsquared_mean += depth * depth;\n\t\t#endif\n\t}\n\tmean = mean * HALF_SAMPLE_RATE;\n\tsquared_mean = squared_mean * HALF_SAMPLE_RATE;\n\tfloat std_dev = sqrt( squared_mean - mean * mean );\n\tgl_FragColor = pack2HalfToRGBA( vec2( mean, std_dev ) );\n}";
 
 var vsm_vert = "void main() {\n\tgl_Position = vec4( position, 1.0 );\n}";
 
@@ -20232,12 +20152,12 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 	} );
 
-	const shadowMaterialHorizonal = shadowMaterialVertical.clone();
-	shadowMaterialHorizonal.defines.HORIZONAL_PASS = 1;
+	const shadowMaterialHorizontal = shadowMaterialVertical.clone();
+	shadowMaterialHorizontal.defines.HORIZONTAL_PASS = 1;
 
 	const fullScreenTri = new BufferGeometry();
 	fullScreenTri.setAttribute(
-		"position",
+		'position',
 		new BufferAttribute(
 			new Float32Array( [ - 1, - 1, 0.5, 3, - 1, 0.5, - 1, 3, 0.5 ] ),
 			3
@@ -20323,7 +20243,7 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 				const pars = { minFilter: LinearFilter, magFilter: LinearFilter, format: RGBAFormat };
 
 				shadow.map = new WebGLRenderTarget( _shadowMapSize.x, _shadowMapSize.y, pars );
-				shadow.map.texture.name = light.name + ".shadowMap";
+				shadow.map.texture.name = light.name + '.shadowMap';
 
 				shadow.mapPass = new WebGLRenderTarget( _shadowMapSize.x, _shadowMapSize.y, pars );
 
@@ -20336,7 +20256,7 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 				const pars = { minFilter: NearestFilter, magFilter: NearestFilter, format: RGBAFormat };
 
 				shadow.map = new WebGLRenderTarget( _shadowMapSize.x, _shadowMapSize.y, pars );
-				shadow.map.texture.name = light.name + ".shadowMap";
+				shadow.map.texture.name = light.name + '.shadowMap';
 
 				shadow.camera.updateProjectionMatrix();
 
@@ -20399,14 +20319,14 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 		_renderer.clear();
 		_renderer.renderBufferDirect( camera, null, geometry, shadowMaterialVertical, fullScreenMesh, null );
 
-		// horizonal pass
+		// horizontal pass
 
-		shadowMaterialHorizonal.uniforms.shadow_pass.value = shadow.mapPass.texture;
-		shadowMaterialHorizonal.uniforms.resolution.value = shadow.mapSize;
-		shadowMaterialHorizonal.uniforms.radius.value = shadow.radius;
+		shadowMaterialHorizontal.uniforms.shadow_pass.value = shadow.mapPass.texture;
+		shadowMaterialHorizontal.uniforms.resolution.value = shadow.mapSize;
+		shadowMaterialHorizontal.uniforms.radius.value = shadow.radius;
 		_renderer.setRenderTarget( shadow.map );
 		_renderer.clear();
-		_renderer.renderBufferDirect( camera, null, geometry, shadowMaterialHorizonal, fullScreenMesh, null );
+		_renderer.renderBufferDirect( camera, null, geometry, shadowMaterialHorizontal, fullScreenMesh, null );
 
 	}
 
@@ -20972,12 +20892,12 @@ function WebGLState( gl, extensions, capabilities ) {
 
 	if ( glVersion.indexOf( 'WebGL' ) !== - 1 ) {
 
-		version = parseFloat( /^WebGL\ ([0-9])/.exec( glVersion )[ 1 ] );
+		version = parseFloat( /^WebGL (\d)/.exec( glVersion )[ 1 ] );
 		lineWidthAvailable = ( version >= 1.0 );
 
 	} else if ( glVersion.indexOf( 'OpenGL ES' ) !== - 1 ) {
 
-		version = parseFloat( /^OpenGL\ ES\ ([0-9])/.exec( glVersion )[ 1 ] );
+		version = parseFloat( /^OpenGL ES (\d)/.exec( glVersion )[ 1 ] );
 		lineWidthAvailable = ( version >= 2.0 );
 
 	}
@@ -21512,10 +21432,23 @@ function WebGLState( gl, extensions, capabilities ) {
 
 		currentProgram = null;
 
+		currentBlendingEnabled = null;
 		currentBlending = null;
+		currentBlendEquation = null;
+		currentBlendSrc = null;
+		currentBlendDst = null;
+		currentBlendEquationAlpha = null;
+		currentBlendSrcAlpha = null;
+		currentBlendDstAlpha = null;
+		currentPremultipledAlpha = false;
 
 		currentFlipSided = null;
 		currentCullFace = null;
+
+		currentLineWidth = null;
+
+		currentPolygonOffsetFactor = null;
+		currentPolygonOffsetUnits = null;
 
 		colorBuffer.reset();
 		depthBuffer.reset();
@@ -21583,7 +21516,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 	try {
 
 		useOffscreenCanvas = typeof OffscreenCanvas !== 'undefined'
-			&& ( new OffscreenCanvas( 1, 1 ).getContext( "2d" ) ) !== null;
+			&& ( new OffscreenCanvas( 1, 1 ).getContext( '2d' ) ) !== null;
 
 	} catch ( err ) {
 
@@ -22271,6 +22204,8 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 		state.bindTexture( 34067, textureProperties.__webglTexture );
 
 		_gl.pixelStorei( 37440, texture.flipY );
+		_gl.pixelStorei( 37441, texture.premultiplyAlpha );
+		_gl.pixelStorei( 3317, texture.unpackAlignment );
 
 		const isCompressed = ( texture && ( texture.isCompressedTexture || texture.image[ 0 ].isCompressedTexture ) );
 		const isDataTexture = ( texture.image[ 0 ] && texture.image[ 0 ].isDataTexture );
@@ -22779,7 +22714,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 			if ( warnedTexture2D === false ) {
 
-				console.warn( "THREE.WebGLTextures.safeSetTexture2D: don't use render targets as textures. Use their .texture property instead." );
+				console.warn( 'THREE.WebGLTextures.safeSetTexture2D: don\'t use render targets as textures. Use their .texture property instead.' );
 				warnedTexture2D = true;
 
 			}
@@ -22798,7 +22733,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 			if ( warnedTextureCube === false ) {
 
-				console.warn( "THREE.WebGLTextures.safeSetTextureCube: don't use cube render targets as textures. Use their .texture property instead." );
+				console.warn( 'THREE.WebGLTextures.safeSetTextureCube: don\'t use cube render targets as textures. Use their .texture property instead.' );
 				warnedTextureCube = true;
 
 			}
@@ -23023,11 +22958,11 @@ function WebGLUtils( gl, extensions, capabilities ) {
 
 }
 
-function ArrayCamera( array ) {
+function ArrayCamera( array = [] ) {
 
 	PerspectiveCamera.call( this );
 
-	this.cameras = array || [];
+	this.cameras = array;
 
 }
 
@@ -23075,24 +23010,8 @@ Object.assign( WebXRController.prototype, {
 			this._hand.matrixAutoUpdate = false;
 			this._hand.visible = false;
 
-			this._hand.joints = [];
+			this._hand.joints = {};
 			this._hand.inputState = { pinching: false };
-
-			if ( window.XRHand ) {
-
-				for ( let i = 0; i <= window.XRHand.LITTLE_PHALANX_TIP; i ++ ) {
-
-					// The transform of this joint will be updated with the joint pose on each frame
-					const joint = new Group();
-					joint.matrixAutoUpdate = false;
-					joint.visible = false;
-					this._hand.joints.push( joint );
-					// ??
-					this._hand.add( joint );
-
-				}
-
-			}
 
 		}
 
@@ -23188,61 +23107,70 @@ Object.assign( WebXRController.prototype, {
 		const grip = this._grip;
 		const hand = this._hand;
 
-		if ( inputSource ) {
+		if ( inputSource && frame.session.visibilityState !== 'visible-blurred' ) {
 
 			if ( hand && inputSource.hand ) {
 
 				handPose = true;
 
-				for ( let i = 0; i <= window.XRHand.LITTLE_PHALANX_TIP; i ++ ) {
+				for ( const inputjoint of inputSource.hand.values() ) {
 
-					if ( inputSource.hand[ i ] ) {
+					// Update the joints groups with the XRJoint poses
+					const jointPose = frame.getJointPose( inputjoint, referenceSpace );
 
-						// Update the joints groups with the XRJoint poses
-						const jointPose = frame.getJointPose( inputSource.hand[ i ], referenceSpace );
-						const joint = hand.joints[ i ];
+					if ( hand.joints[ inputjoint.jointName ] === undefined ) {
 
-						if ( jointPose !== null ) {
-
-							joint.matrix.fromArray( jointPose.transform.matrix );
-							joint.matrix.decompose( joint.position, joint.rotation, joint.scale );
-							joint.jointRadius = jointPose.radius;
-
-						}
-
-						joint.visible = jointPose !== null;
-
-						// Custom events
-
-						// Check pinch
-						const indexTip = hand.joints[ window.XRHand.INDEX_PHALANX_TIP ];
-						const thumbTip = hand.joints[ window.XRHand.THUMB_PHALANX_TIP ];
-						const distance = indexTip.position.distanceTo( thumbTip.position );
-
-						const distanceToPinch = 0.02;
-						const threshold = 0.005;
-
-						if ( hand.inputState.pinching && distance > distanceToPinch + threshold ) {
-
-							hand.inputState.pinching = false;
-							this.dispatchEvent( {
-								type: "pinchend",
-								handedness: inputSource.handedness,
-								target: this
-							} );
-
-						} else if ( ! hand.inputState.pinching && distance <= distanceToPinch - threshold ) {
-
-							hand.inputState.pinching = true;
-							this.dispatchEvent( {
-								type: "pinchstart",
-								handedness: inputSource.handedness,
-								target: this
-							} );
-
-						}
+						// The transform of this joint will be updated with the joint pose on each frame
+						const joint = new Group();
+						joint.matrixAutoUpdate = false;
+						joint.visible = false;
+						hand.joints[ inputjoint.jointName ] = joint;
+						// ??
+						hand.add( joint );
 
 					}
+
+					const joint = hand.joints[ inputjoint.jointName ];
+
+					if ( jointPose !== null ) {
+
+						joint.matrix.fromArray( jointPose.transform.matrix );
+						joint.matrix.decompose( joint.position, joint.rotation, joint.scale );
+						joint.jointRadius = jointPose.radius;
+
+					}
+
+					joint.visible = jointPose !== null;
+
+				}
+
+				// Custom events
+
+				// Check pinchz
+				const indexTip = hand.joints[ 'index-finger-tip' ];
+				const thumbTip = hand.joints[ 'thumb-tip' ];
+				const distance = indexTip.position.distanceTo( thumbTip.position );
+
+				const distanceToPinch = 0.02;
+				const threshold = 0.005;
+
+				if ( hand.inputState.pinching && distance > distanceToPinch + threshold ) {
+
+					hand.inputState.pinching = false;
+					this.dispatchEvent( {
+						type: 'pinchend',
+						handedness: inputSource.handedness,
+						target: this
+					} );
+
+				} else if ( ! hand.inputState.pinching && distance <= distanceToPinch - threshold ) {
+
+					hand.inputState.pinching = true;
+					this.dispatchEvent( {
+						type: 'pinchstart',
+						handedness: inputSource.handedness,
+						target: this
+					} );
 
 				}
 
@@ -23412,6 +23340,9 @@ function WebXRManager( renderer, gl ) {
 
 		inputSourcesMap.clear();
 
+		_currentDepthNear = null;
+		_currentDepthFar = null;
+
 		//
 
 		renderer.setFramebuffer( null );
@@ -23421,19 +23352,6 @@ function WebXRManager( renderer, gl ) {
 		scope.isPresenting = false;
 
 		scope.dispatchEvent( { type: 'sessionend' } );
-
-	}
-
-	function onRequestReferenceSpace( value ) {
-
-		referenceSpace = value;
-
-		animation.setContext( session );
-		animation.start();
-
-		scope.isPresenting = true;
-
-		scope.dispatchEvent( { type: 'sessionstart' } );
 
 	}
 
@@ -23473,7 +23391,7 @@ function WebXRManager( renderer, gl ) {
 
 	};
 
-	this.setSession = function ( value ) {
+	this.setSession = async function ( value ) {
 
 		session = value;
 
@@ -23486,12 +23404,13 @@ function WebXRManager( renderer, gl ) {
 			session.addEventListener( 'squeezestart', onSessionEvent );
 			session.addEventListener( 'squeezeend', onSessionEvent );
 			session.addEventListener( 'end', onSessionEnd );
+			session.addEventListener( 'inputsourceschange', onInputSourcesChange );
 
 			const attributes = gl.getContextAttributes();
 
 			if ( attributes.xrCompatible !== true ) {
 
-				gl.makeXRCompatible();
+				await gl.makeXRCompatible();
 
 			}
 
@@ -23508,17 +23427,20 @@ function WebXRManager( renderer, gl ) {
 
 			session.updateRenderState( { baseLayer: baseLayer } );
 
-			session.requestReferenceSpace( referenceSpaceType ).then( onRequestReferenceSpace );
+			referenceSpace = await session.requestReferenceSpace( referenceSpaceType );
 
-			//
+			animation.setContext( session );
+			animation.start();
 
-			session.addEventListener( 'inputsourceschange', updateInputSources );
+			scope.isPresenting = true;
+
+			scope.dispatchEvent( { type: 'sessionstart' } );
 
 		}
 
 	};
 
-	function updateInputSources( event ) {
+	function onInputSourcesChange( event ) {
 
 		const inputSources = session.inputSources;
 
@@ -23607,7 +23529,7 @@ function WebXRManager( renderer, gl ) {
 		camera.translateX( xOffset );
 		camera.translateZ( zOffset );
 		camera.matrixWorld.compose( camera.position, camera.quaternion, camera.scale );
-		camera.matrixWorldInverse.getInverse( camera.matrixWorld );
+		camera.matrixWorldInverse.copy( camera.matrixWorld ).invert();
 
 		// Find the union of the frustum values of the cameras and scale
 		// the values so that the near plane's position does not change in world space,
@@ -23635,7 +23557,7 @@ function WebXRManager( renderer, gl ) {
 
 		}
 
-		camera.matrixWorldInverse.getInverse( camera.matrixWorld );
+		camera.matrixWorldInverse.copy( camera.matrixWorld ).invert();
 
 	}
 
@@ -23672,6 +23594,8 @@ function WebXRManager( renderer, gl ) {
 		// update camera and its children
 
 		camera.matrixWorld.copy( cameraVR.matrixWorld );
+		camera.matrix.copy( cameraVR.matrix );
+		camera.matrix.decompose( camera.position, camera.quaternion, camera.scale );
 
 		const children = camera.children;
 
@@ -24478,11 +24402,19 @@ function WebGLMaterials( properties ) {
 
 }
 
+function createCanvasElement() {
+
+	const canvas = document.createElementNS( 'http://www.w3.org/1999/xhtml', 'canvas' );
+	canvas.style.display = 'block';
+	return canvas;
+
+}
+
 function WebGLRenderer( parameters ) {
 
 	parameters = parameters || {};
 
-	const _canvas = parameters.canvas !== undefined ? parameters.canvas : document.createElementNS( 'http://www.w3.org/1999/xhtml', 'canvas' ),
+	const _canvas = parameters.canvas !== undefined ? parameters.canvas : createCanvasElement(),
 		_context = parameters.context !== undefined ? parameters.context : null,
 
 		_alpha = parameters.alpha !== undefined ? parameters.alpha : false,
@@ -24496,6 +24428,11 @@ function WebGLRenderer( parameters ) {
 
 	let currentRenderList = null;
 	let currentRenderState = null;
+
+	// render() can be called from within a callback triggered by another render.
+	// We track this so that the nested render call gets its state isolated from the parent render call.
+
+	const renderStateStack = [];
 
 	// public properties
 
@@ -24563,7 +24500,6 @@ function WebGLRenderer( parameters ) {
 	let _currentMaterialId = - 1;
 
 	let _currentCamera = null;
-	let _currentArrayCamera = null;
 
 	const _currentViewport = new Vector4();
 	const _currentScissor = new Vector4();
@@ -24702,20 +24638,7 @@ function WebGLRenderer( parameters ) {
 
 		capabilities = new WebGLCapabilities( _gl, extensions, parameters );
 
-		if ( capabilities.isWebGL2 === false ) {
-
-			extensions.get( 'WEBGL_depth_texture' );
-			extensions.get( 'OES_texture_float' );
-			extensions.get( 'OES_texture_half_float' );
-			extensions.get( 'OES_texture_half_float_linear' );
-			extensions.get( 'OES_standard_derivatives' );
-			extensions.get( 'OES_element_index_uint' );
-			extensions.get( 'OES_vertex_array_object' );
-			extensions.get( 'ANGLE_instanced_arrays' );
-
-		}
-
-		extensions.get( 'OES_texture_float_linear' );
+		extensions.init( capabilities );
 
 		utils = new WebGLUtils( _gl, extensions, capabilities );
 
@@ -24736,7 +24659,7 @@ function WebGLRenderer( parameters ) {
 		programCache = new WebGLPrograms( _this, cubemaps, extensions, capabilities, bindingStates, clipping );
 		materials = new WebGLMaterials( properties );
 		renderLists = new WebGLRenderLists( properties );
-		renderStates = new WebGLRenderStates();
+		renderStates = new WebGLRenderStates( extensions, capabilities );
 		background = new WebGLBackground( _this, cubemaps, state, objects, _premultipliedAlpha );
 
 		bufferRenderer = new WebGLBufferRenderer( _gl, extensions, info, capabilities );
@@ -24963,9 +24886,17 @@ function WebGLRenderer( parameters ) {
 
 	// Clearing
 
-	this.getClearColor = function () {
+	this.getClearColor = function ( target ) {
 
-		return background.getClearColor();
+		if ( target === undefined ) {
+
+			console.warn( 'WebGLRenderer: .getClearColor() now requires a Color as an argument' );
+
+			target = new Color();
+
+		}
+
+		return target.copy( background.getClearColor() );
 
 	};
 
@@ -25309,12 +25240,12 @@ function WebGLRenderer( parameters ) {
 
 	this.compile = function ( scene, camera ) {
 
-		currentRenderState = renderStates.get( scene, camera );
+		currentRenderState = renderStates.get( scene );
 		currentRenderState.init();
 
-		scene.traverse( function ( object ) {
+		scene.traverseVisible( function ( object ) {
 
-			if ( object.isLight ) {
+			if ( object.isLight && object.layers.test( camera.layers ) ) {
 
 				currentRenderState.pushLight( object );
 
@@ -25328,7 +25259,7 @@ function WebGLRenderer( parameters ) {
 
 		} );
 
-		currentRenderState.setupLights( camera );
+		currentRenderState.setupLights();
 
 		const compiled = new WeakMap();
 
@@ -25443,8 +25374,10 @@ function WebGLRenderer( parameters ) {
 		//
 		if ( scene.isScene === true ) scene.onBeforeRender( _this, scene, camera, renderTarget || _currentRenderTarget );
 
-		currentRenderState = renderStates.get( scene, camera );
+		currentRenderState = renderStates.get( scene, renderStateStack.length );
 		currentRenderState.init();
+
+		renderStateStack.push( currentRenderState );
 
 		_projScreenMatrix.multiplyMatrices( camera.projectionMatrix, camera.matrixWorldInverse );
 		_frustum.setFromProjectionMatrix( _projScreenMatrix );
@@ -25473,7 +25406,8 @@ function WebGLRenderer( parameters ) {
 
 		shadowMap.render( shadowsArray, scene, camera );
 
-		currentRenderState.setupLights( camera );
+		currentRenderState.setupLights();
+		currentRenderState.setupLightsView( camera );
 
 		if ( _clippingEnabled === true ) clipping.endShadows();
 
@@ -25527,8 +25461,18 @@ function WebGLRenderer( parameters ) {
 
 		// _gl.finish();
 
+		renderStateStack.pop();
+		if ( renderStateStack.length > 0 ) {
+
+			currentRenderState = renderStateStack[ renderStateStack.length - 1 ];
+
+		} else {
+
+			currentRenderState = null;
+
+		}
+
 		currentRenderList = null;
-		currentRenderState = null;
 
 	};
 
@@ -25672,8 +25616,6 @@ function WebGLRenderer( parameters ) {
 
 			if ( camera.isArrayCamera ) {
 
-				_currentArrayCamera = camera;
-
 				const cameras = camera.cameras;
 
 				for ( let j = 0, jl = cameras.length; j < jl; j ++ ) {
@@ -25684,7 +25626,7 @@ function WebGLRenderer( parameters ) {
 
 						state.viewport( _currentViewport.copy( camera2.viewport ) );
 
-						currentRenderState.setupLights( camera2 );
+						currentRenderState.setupLightsView( camera2 );
 
 						renderObject( object, scene, camera2, geometry, material, group );
 
@@ -25693,8 +25635,6 @@ function WebGLRenderer( parameters ) {
 				}
 
 			} else {
-
-				_currentArrayCamera = null;
 
 				renderObject( object, scene, camera, geometry, material, group );
 
@@ -25707,7 +25647,6 @@ function WebGLRenderer( parameters ) {
 	function renderObject( object, scene, camera, geometry, material, group ) {
 
 		object.onBeforeRender( _this, scene, camera, geometry, material, group );
-		currentRenderState = renderStates.get( scene, _currentArrayCamera || camera );
 
 		object.modelViewMatrix.multiplyMatrices( camera.matrixWorldInverse, object.matrixWorld );
 		object.normalMatrix.getNormalMatrix( object.modelViewMatrix );
@@ -25729,7 +25668,6 @@ function WebGLRenderer( parameters ) {
 		}
 
 		object.onAfterRender( _this, scene, camera, geometry, material, group );
-		currentRenderState = renderStates.get( scene, _currentArrayCamera || camera );
 
 	}
 
@@ -25750,6 +25688,12 @@ function WebGLRenderer( parameters ) {
 		let program = materialProperties.program;
 		let programChange = true;
 
+		// always update environment and fog - changing these trigger an initMaterial call, but it's possible that the program doesn't change
+
+		materialProperties.environment = material.isMeshStandardMaterial ? scene.environment : null;
+		materialProperties.fog = scene.fog;
+		materialProperties.envMap = cubemaps.get( material.envMap || materialProperties.environment );
+
 		if ( program === undefined ) {
 
 			// new material
@@ -25766,11 +25710,7 @@ function WebGLRenderer( parameters ) {
 
 		} else if ( parameters.shaderID !== undefined ) {
 
-			// same glsl and uniform list, envMap still needs the update here to avoid a frame-late effect
-
-			const environment = material.isMeshStandardMaterial ? scene.environment : null;
-			materialProperties.envMap = cubemaps.get( material.envMap || environment );
-
+			// same glsl and uniform list
 			return;
 
 		} else {
@@ -25805,10 +25745,6 @@ function WebGLRenderer( parameters ) {
 			uniforms.clippingPlanes = clipping.uniform;
 
 		}
-
-		materialProperties.environment = material.isMeshStandardMaterial ? scene.environment : null;
-		materialProperties.fog = scene.fog;
-		materialProperties.envMap = cubemaps.get( material.envMap || materialProperties.environment );
 
 		// store the light setup it was created for
 
@@ -26028,7 +25964,7 @@ function WebGLRenderer( parameters ) {
 
 				if ( capabilities.floatVertexTextures ) {
 
-					if ( skeleton.boneTexture === undefined ) {
+					if ( skeleton.boneTexture === null ) {
 
 						// layout (1 matrix = 4 pixels)
 						//      RGBA RGBA RGBA RGBA (=> column1, column2, column3, column4)
@@ -26188,18 +26124,6 @@ function WebGLRenderer( parameters ) {
 
 	};
 
-	this.getRenderState = function () {
-
-		return currentRenderState;
-
-	};
-
-	this.setRenderState = function ( renderState ) {
-
-		currentRenderState = renderState;
-
-	};
-
 	this.getRenderTarget = function () {
 
 		return _currentRenderTarget;
@@ -26314,9 +26238,11 @@ function WebGLRenderer( parameters ) {
 
 				}
 
+				const halfFloatSupportedByExt = ( textureType === HalfFloatType ) && ( extensions.has( 'EXT_color_buffer_half_float' ) || ( capabilities.isWebGL2 && extensions.has( 'EXT_color_buffer_float' ) ) );
+
 				if ( textureType !== UnsignedByteType && utils.convert( textureType ) !== _gl.getParameter( 35738 ) && // IE11, Edge and Chrome Mac < 52 (#9513)
-					! ( textureType === FloatType && ( capabilities.isWebGL2 || extensions.get( 'OES_texture_float' ) || extensions.get( 'WEBGL_color_buffer_float' ) ) ) && // Chrome Mac >= 52 and Firefox
-					! ( textureType === HalfFloatType && ( capabilities.isWebGL2 ? extensions.get( 'EXT_color_buffer_float' ) : extensions.get( 'EXT_color_buffer_half_float' ) ) ) ) {
+					! ( textureType === FloatType && ( capabilities.isWebGL2 || extensions.has( 'OES_texture_float' ) || extensions.has( 'WEBGL_color_buffer_float' ) ) ) && // Chrome Mac >= 52 and Firefox
+					! halfFloatSupportedByExt ) {
 
 					console.error( 'THREE.WebGLRenderer.readRenderTargetPixels: renderTarget is not in UnsignedByteType or implementation defined type.' );
 					return;
@@ -26353,9 +26279,7 @@ function WebGLRenderer( parameters ) {
 
 	};
 
-	this.copyFramebufferToTexture = function ( position, texture, level ) {
-
-		if ( level === undefined ) level = 0;
+	this.copyFramebufferToTexture = function ( position, texture, level = 0 ) {
 
 		const levelScale = Math.pow( 2, - level );
 		const width = Math.floor( texture.image.width * levelScale );
@@ -26370,9 +26294,7 @@ function WebGLRenderer( parameters ) {
 
 	};
 
-	this.copyTextureToTexture = function ( position, srcTexture, dstTexture, level ) {
-
-		if ( level === undefined ) level = 0;
+	this.copyTextureToTexture = function ( position, srcTexture, dstTexture, level = 0 ) {
 
 		const width = srcTexture.image.width;
 		const height = srcTexture.image.height;
@@ -26417,6 +26339,13 @@ function WebGLRenderer( parameters ) {
 		textures.setTexture2D( texture, 0 );
 
 		state.unbindTexture();
+
+	};
+
+	this.resetState = function () {
+
+		state.reset();
+		bindingStates.reset();
 
 	};
 
@@ -26564,9 +26493,7 @@ Object.assign( InterleavedBuffer.prototype, {
 
 	},
 
-	set: function ( value, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	set: function ( value, offset = 0 ) {
 
 		this.array.set( value, offset );
 
@@ -27183,9 +27110,7 @@ LOD.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 	},
 
-	addLevel: function ( object, distance ) {
-
-		if ( distance === undefined ) distance = 0;
+	addLevel: function ( object, distance = 0 ) {
 
 		distance = Math.abs( distance );
 
@@ -27328,6 +27253,14 @@ LOD.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 } );
 
+const _basePosition = new Vector3();
+
+const _skinIndex = new Vector4();
+const _skinWeight = new Vector4();
+
+const _vector$7 = new Vector3();
+const _matrix$1 = new Matrix4();
+
 function SkinnedMesh( geometry, material ) {
 
 	if ( geometry && geometry.isGeometry ) {
@@ -27381,7 +27314,7 @@ SkinnedMesh.prototype = Object.assign( Object.create( Mesh.prototype ), {
 		}
 
 		this.bindMatrix.copy( bindMatrix );
-		this.bindMatrixInverse.getInverse( bindMatrix );
+		this.bindMatrixInverse.copy( bindMatrix ).invert();
 
 	},
 
@@ -27428,11 +27361,11 @@ SkinnedMesh.prototype = Object.assign( Object.create( Mesh.prototype ), {
 
 		if ( this.bindMode === 'attached' ) {
 
-			this.bindMatrixInverse.getInverse( this.matrixWorld );
+			this.bindMatrixInverse.copy( this.matrixWorld ).invert();
 
 		} else if ( this.bindMode === 'detached' ) {
 
-			this.bindMatrixInverse.getInverse( this.bindMatrix );
+			this.bindMatrixInverse.copy( this.bindMatrix ).invert();
 
 		} else {
 
@@ -27442,101 +27375,116 @@ SkinnedMesh.prototype = Object.assign( Object.create( Mesh.prototype ), {
 
 	},
 
-	boneTransform: ( function () {
+	boneTransform: function ( index, target ) {
 
-		const basePosition = new Vector3();
+		const skeleton = this.skeleton;
+		const geometry = this.geometry;
 
-		const skinIndex = new Vector4();
-		const skinWeight = new Vector4();
+		_skinIndex.fromBufferAttribute( geometry.attributes.skinIndex, index );
+		_skinWeight.fromBufferAttribute( geometry.attributes.skinWeight, index );
 
-		const vector = new Vector3();
-		const matrix = new Matrix4();
+		_basePosition.fromBufferAttribute( geometry.attributes.position, index ).applyMatrix4( this.bindMatrix );
 
-		return function ( index, target ) {
+		target.set( 0, 0, 0 );
 
-			const skeleton = this.skeleton;
-			const geometry = this.geometry;
+		for ( let i = 0; i < 4; i ++ ) {
 
-			skinIndex.fromBufferAttribute( geometry.attributes.skinIndex, index );
-			skinWeight.fromBufferAttribute( geometry.attributes.skinWeight, index );
+			const weight = _skinWeight.getComponent( i );
 
-			basePosition.fromBufferAttribute( geometry.attributes.position, index ).applyMatrix4( this.bindMatrix );
+			if ( weight !== 0 ) {
 
-			target.set( 0, 0, 0 );
+				const boneIndex = _skinIndex.getComponent( i );
 
-			for ( let i = 0; i < 4; i ++ ) {
+				_matrix$1.multiplyMatrices( skeleton.bones[ boneIndex ].matrixWorld, skeleton.boneInverses[ boneIndex ] );
 
-				const weight = skinWeight.getComponent( i );
-
-				if ( weight !== 0 ) {
-
-					const boneIndex = skinIndex.getComponent( i );
-
-					matrix.multiplyMatrices( skeleton.bones[ boneIndex ].matrixWorld, skeleton.boneInverses[ boneIndex ] );
-
-					target.addScaledVector( vector.copy( basePosition ).applyMatrix4( matrix ), weight );
-
-				}
+				target.addScaledVector( _vector$7.copy( _basePosition ).applyMatrix4( _matrix$1 ), weight );
 
 			}
 
-			return target.applyMatrix4( this.bindMatrixInverse );
+		}
 
-		};
+		return target.applyMatrix4( this.bindMatrixInverse );
 
-	}() )
+	}
+
+} );
+
+function Bone() {
+
+	Object3D.call( this );
+
+	this.type = 'Bone';
+
+}
+
+Bone.prototype = Object.assign( Object.create( Object3D.prototype ), {
+
+	constructor: Bone,
+
+	isBone: true
 
 } );
 
 const _offsetMatrix = new Matrix4();
 const _identityMatrix = new Matrix4();
 
-function Skeleton( bones, boneInverses ) {
+function Skeleton( bones = [], boneInverses = [] ) {
 
-	// copy the bone array
-
-	bones = bones || [];
+	this.uuid = MathUtils.generateUUID();
 
 	this.bones = bones.slice( 0 );
-	this.boneMatrices = new Float32Array( this.bones.length * 16 );
+	this.boneInverses = boneInverses;
+	this.boneMatrices = null;
+
+	this.boneTexture = null;
+	this.boneTextureSize = 0;
 
 	this.frame = - 1;
 
-	// use the supplied bone inverses or calculate the inverses
-
-	if ( boneInverses === undefined ) {
-
-		this.calculateInverses();
-
-	} else {
-
-		if ( this.bones.length === boneInverses.length ) {
-
-			this.boneInverses = boneInverses.slice( 0 );
-
-		} else {
-
-			console.warn( 'THREE.Skeleton boneInverses is the wrong length.' );
-
-			this.boneInverses = [];
-
-			for ( let i = 0, il = this.bones.length; i < il; i ++ ) {
-
-				this.boneInverses.push( new Matrix4() );
-
-			}
-
-		}
-
-	}
+	this.init();
 
 }
 
 Object.assign( Skeleton.prototype, {
 
+	init: function () {
+
+		const bones = this.bones;
+		const boneInverses = this.boneInverses;
+
+		this.boneMatrices = new Float32Array( bones.length * 16 );
+
+		// calculate inverse bone matrices if necessary
+
+		if ( boneInverses.length === 0 ) {
+
+			this.calculateInverses();
+
+		} else {
+
+			// handle special case
+
+			if ( bones.length !== boneInverses.length ) {
+
+				console.warn( 'THREE.Skeleton: Number of inverse bone matrices does not match amount of bones.' );
+
+				this.boneInverses = [];
+
+				for ( let i = 0, il = this.bones.length; i < il; i ++ ) {
+
+					this.boneInverses.push( new Matrix4() );
+
+				}
+
+			}
+
+		}
+
+	},
+
 	calculateInverses: function () {
 
-		this.boneInverses = [];
+		this.boneInverses.length = 0;
 
 		for ( let i = 0, il = this.bones.length; i < il; i ++ ) {
 
@@ -27544,7 +27492,7 @@ Object.assign( Skeleton.prototype, {
 
 			if ( this.bones[ i ] ) {
 
-				inverse.getInverse( this.bones[ i ].matrixWorld );
+				inverse.copy( this.bones[ i ].matrixWorld ).invert();
 
 			}
 
@@ -27564,7 +27512,7 @@ Object.assign( Skeleton.prototype, {
 
 			if ( bone ) {
 
-				bone.matrixWorld.getInverse( this.boneInverses[ i ] );
+				bone.matrixWorld.copy( this.boneInverses[ i ] ).invert();
 
 			}
 
@@ -27580,7 +27528,7 @@ Object.assign( Skeleton.prototype, {
 
 				if ( bone.parent && bone.parent.isBone ) {
 
-					bone.matrix.getInverse( bone.parent.matrixWorld );
+					bone.matrix.copy( bone.parent.matrixWorld ).invert();
 					bone.matrix.multiply( bone.matrixWorld );
 
 				} else {
@@ -27617,7 +27565,7 @@ Object.assign( Skeleton.prototype, {
 
 		}
 
-		if ( boneTexture !== undefined ) {
+		if ( boneTexture !== null ) {
 
 			boneTexture.needsUpdate = true;
 
@@ -27651,31 +27599,73 @@ Object.assign( Skeleton.prototype, {
 
 	dispose: function ( ) {
 
-		if ( this.boneTexture ) {
+		if ( this.boneTexture !== null ) {
 
 			this.boneTexture.dispose();
 
-			this.boneTexture = undefined;
+			this.boneTexture = null;
 
 		}
 
+	},
+
+	fromJSON: function ( json, bones ) {
+
+		this.uuid = json.uuid;
+
+		for ( let i = 0, l = json.bones.length; i < l; i ++ ) {
+
+			const uuid = json.bones[ i ];
+			let bone = bones[ uuid ];
+
+			if ( bone === undefined ) {
+
+				console.warn( 'THREE.Skeleton: No bone found with UUID:', uuid );
+				bone = new Bone();
+
+			}
+
+			this.bones.push( bone );
+			this.boneInverses.push( new Matrix4().fromArray( json.boneInverses[ i ] ) );
+
+		}
+
+		this.init();
+
+		return this;
+
+	},
+
+	toJSON: function () {
+
+		const data = {
+			metadata: {
+				version: 4.5,
+				type: 'Skeleton',
+				generator: 'Skeleton.toJSON'
+			},
+			bones: [],
+			boneInverses: []
+		};
+
+		data.uuid = this.uuid;
+
+		const bones = this.bones;
+		const boneInverses = this.boneInverses;
+
+		for ( let i = 0, l = bones.length; i < l; i ++ ) {
+
+			const bone = bones[ i ];
+			data.bones.push( bone.uuid );
+
+			const boneInverse = boneInverses[ i ];
+			data.boneInverses.push( boneInverse.toArray() );
+
+		}
+
+		return data;
+
 	}
-
-} );
-
-function Bone() {
-
-	Object3D.call( this );
-
-	this.type = 'Bone';
-
-}
-
-Bone.prototype = Object.assign( Object.create( Object3D.prototype ), {
-
-	constructor: Bone,
-
-	isBone: true
 
 } );
 
@@ -27710,21 +27700,18 @@ InstancedMesh.prototype = Object.assign( Object.create( Mesh.prototype ), {
 		Mesh.prototype.copy.call( this, source );
 
 		this.instanceMatrix.copy( source.instanceMatrix );
+
+		if ( source.instanceColor !== null ) this.instanceColor = source.instanceColor.clone();
+
 		this.count = source.count;
 
 		return this;
 
 	},
 
-	setColorAt: function ( index, color ) {
+	getColorAt: function ( index, color ) {
 
-		if ( this.instanceColor === null ) {
-
-			this.instanceColor = new BufferAttribute( new Float32Array( this.count * 3 ), 3 );
-
-		}
-
-		color.toArray( this.instanceColor.array, index * 3 );
+		color.fromArray( this.instanceColor.array, index * 3 );
 
 	},
 
@@ -27775,6 +27762,18 @@ InstancedMesh.prototype = Object.assign( Object.create( Mesh.prototype ), {
 
 	},
 
+	setColorAt: function ( index, color ) {
+
+		if ( this.instanceColor === null ) {
+
+			this.instanceColor = new BufferAttribute( new Float32Array( this.count * 3 ), 3 );
+
+		}
+
+		color.toArray( this.instanceColor.array, index * 3 );
+
+	},
+
 	setMatrixAt: function ( index, matrix ) {
 
 		matrix.toArray( this.instanceMatrix.array, index * 16 );
@@ -27782,6 +27781,12 @@ InstancedMesh.prototype = Object.assign( Object.create( Mesh.prototype ), {
 	},
 
 	updateMorphTargets: function () {
+
+	},
+
+	dispose: function () {
+
+		this.dispatchEvent( { type: 'dispose' } );
 
 	}
 
@@ -27843,20 +27848,14 @@ const _inverseMatrix$1 = new Matrix4();
 const _ray$1 = new Ray();
 const _sphere$2 = new Sphere();
 
-function Line( geometry, material, mode ) {
-
-	if ( mode === 1 ) {
-
-		console.error( 'THREE.Line: parameter THREE.LinePieces no longer supported. Use THREE.LineSegments instead.' );
-
-	}
+function Line( geometry = new BufferGeometry(), material = new LineBasicMaterial() ) {
 
 	Object3D.call( this );
 
 	this.type = 'Line';
 
-	this.geometry = geometry !== undefined ? geometry : new BufferGeometry();
-	this.material = material !== undefined ? material : new LineBasicMaterial();
+	this.geometry = geometry;
+	this.material = material;
 
 	this.updateMorphTargets();
 
@@ -27912,17 +27911,7 @@ Line.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		} else if ( geometry.isGeometry ) {
 
-			const vertices = geometry.vertices;
-			const lineDistances = geometry.lineDistances;
-
-			lineDistances[ 0 ] = 0;
-
-			for ( let i = 1, l = vertices.length; i < l; i ++ ) {
-
-				lineDistances[ i ] = lineDistances[ i - 1 ];
-				lineDistances[ i ] += vertices[ i - 1 ].distanceTo( vertices[ i ] );
-
-			}
+			console.error( 'THREE.Line.computeLineDistances() no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
 
 		}
 
@@ -27948,7 +27937,7 @@ Line.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		//
 
-		_inverseMatrix$1.getInverse( matrixWorld );
+		_inverseMatrix$1.copy( matrixWorld ).invert();
 		_ray$1.copy( raycaster.ray ).applyMatrix4( _inverseMatrix$1 );
 
 		const localThreshold = threshold / ( ( this.scale.x + this.scale.y + this.scale.z ) / 3 );
@@ -28039,35 +28028,7 @@ Line.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		} else if ( geometry.isGeometry ) {
 
-			const vertices = geometry.vertices;
-			const nbVertices = vertices.length;
-
-			for ( let i = 0; i < nbVertices - 1; i += step ) {
-
-				const distSq = _ray$1.distanceSqToSegment( vertices[ i ], vertices[ i + 1 ], interRay, interSegment );
-
-				if ( distSq > localThresholdSq ) continue;
-
-				interRay.applyMatrix4( this.matrixWorld ); //Move back to world space for distance calculation
-
-				const distance = raycaster.ray.origin.distanceTo( interRay );
-
-				if ( distance < raycaster.near || distance > raycaster.far ) continue;
-
-				intersects.push( {
-
-					distance: distance,
-					// What do we want? intersection point on the ray or on the segment??
-					// point: raycaster.ray.at( distance ),
-					point: interSegment.clone().applyMatrix4( this.matrixWorld ),
-					index: i,
-					face: null,
-					faceIndex: null,
-					object: this
-
-				} );
-
-			}
+			console.error( 'THREE.Line.raycast() no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
 
 		}
 
@@ -28170,18 +28131,7 @@ LineSegments.prototype = Object.assign( Object.create( Line.prototype ), {
 
 		} else if ( geometry.isGeometry ) {
 
-			const vertices = geometry.vertices;
-			const lineDistances = geometry.lineDistances;
-
-			for ( let i = 0, l = vertices.length; i < l; i += 2 ) {
-
-				_start$1.copy( vertices[ i ] );
-				_end$1.copy( vertices[ i + 1 ] );
-
-				lineDistances[ i ] = ( i === 0 ) ? 0 : lineDistances[ i - 1 ];
-				lineDistances[ i + 1 ] = lineDistances[ i ] + _start$1.distanceTo( _end$1 );
-
-			}
+			console.error( 'THREE.LineSegments.computeLineDistances() no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
 
 		}
 
@@ -28271,14 +28221,14 @@ const _ray$2 = new Ray();
 const _sphere$3 = new Sphere();
 const _position$1 = new Vector3();
 
-function Points( geometry, material ) {
+function Points( geometry = new BufferGeometry(), material = new PointsMaterial() ) {
 
 	Object3D.call( this );
 
 	this.type = 'Points';
 
-	this.geometry = geometry !== undefined ? geometry : new BufferGeometry();
-	this.material = material !== undefined ? material : new PointsMaterial();
+	this.geometry = geometry;
+	this.material = material;
 
 	this.updateMorphTargets();
 
@@ -28319,7 +28269,7 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		//
 
-		_inverseMatrix$2.getInverse( matrixWorld );
+		_inverseMatrix$2.copy( matrixWorld ).invert();
 		_ray$2.copy( raycaster.ray ).applyMatrix4( _inverseMatrix$2 );
 
 		const localThreshold = threshold / ( ( this.scale.x + this.scale.y + this.scale.z ) / 3 );
@@ -28359,13 +28309,7 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		} else {
 
-			const vertices = geometry.vertices;
-
-			for ( let i = 0, l = vertices.length; i < l; i ++ ) {
-
-				testPoint( vertices[ i ], i, localThresholdSq, matrixWorld, raycaster, intersects, this );
-
-			}
+			console.error( 'THREE.Points.raycast() no longer supports THREE.Geometry. Use THREE.BufferGeometry instead.' );
 
 		}
 
@@ -28480,6 +28424,12 @@ VideoTexture.prototype = Object.assign( Object.create( Texture.prototype ), {
 
 	constructor: VideoTexture,
 
+	clone: function () {
+
+		return new this.constructor( this.image ).copy( this );
+
+	},
+
 	isVideoTexture: true,
 
 	update: function () {
@@ -28554,1381 +28504,13 @@ function DepthTexture( width, height, type, mapping, wrapS, wrapT, magFilter, mi
 	this.minFilter = minFilter !== undefined ? minFilter : NearestFilter;
 
 	this.flipY = false;
-	this.generateMipmaps	= false;
+	this.generateMipmaps = false;
 
 }
 
 DepthTexture.prototype = Object.create( Texture.prototype );
 DepthTexture.prototype.constructor = DepthTexture;
 DepthTexture.prototype.isDepthTexture = true;
-
-let _geometryId = 0; // Geometry uses even numbers as Id
-const _m1$3 = new Matrix4();
-const _obj$1 = new Object3D();
-const _offset$1 = new Vector3();
-
-function Geometry() {
-
-	Object.defineProperty( this, 'id', { value: _geometryId += 2 } );
-
-	this.uuid = MathUtils.generateUUID();
-
-	this.name = '';
-	this.type = 'Geometry';
-
-	this.vertices = [];
-	this.colors = [];
-	this.faces = [];
-	this.faceVertexUvs = [[]];
-
-	this.morphTargets = [];
-	this.morphNormals = [];
-
-	this.skinWeights = [];
-	this.skinIndices = [];
-
-	this.lineDistances = [];
-
-	this.boundingBox = null;
-	this.boundingSphere = null;
-
-	// update flags
-
-	this.elementsNeedUpdate = false;
-	this.verticesNeedUpdate = false;
-	this.uvsNeedUpdate = false;
-	this.normalsNeedUpdate = false;
-	this.colorsNeedUpdate = false;
-	this.lineDistancesNeedUpdate = false;
-	this.groupsNeedUpdate = false;
-
-}
-
-Geometry.prototype = Object.assign( Object.create( EventDispatcher.prototype ), {
-
-	constructor: Geometry,
-
-	isGeometry: true,
-
-	applyMatrix4: function ( matrix ) {
-
-		const normalMatrix = new Matrix3().getNormalMatrix( matrix );
-
-		for ( let i = 0, il = this.vertices.length; i < il; i ++ ) {
-
-			const vertex = this.vertices[ i ];
-			vertex.applyMatrix4( matrix );
-
-		}
-
-		for ( let i = 0, il = this.faces.length; i < il; i ++ ) {
-
-			const face = this.faces[ i ];
-			face.normal.applyMatrix3( normalMatrix ).normalize();
-
-			for ( let j = 0, jl = face.vertexNormals.length; j < jl; j ++ ) {
-
-				face.vertexNormals[ j ].applyMatrix3( normalMatrix ).normalize();
-
-			}
-
-		}
-
-		if ( this.boundingBox !== null ) {
-
-			this.computeBoundingBox();
-
-		}
-
-		if ( this.boundingSphere !== null ) {
-
-			this.computeBoundingSphere();
-
-		}
-
-		this.verticesNeedUpdate = true;
-		this.normalsNeedUpdate = true;
-
-		return this;
-
-	},
-
-	rotateX: function ( angle ) {
-
-		// rotate geometry around world x-axis
-
-		_m1$3.makeRotationX( angle );
-
-		this.applyMatrix4( _m1$3 );
-
-		return this;
-
-	},
-
-	rotateY: function ( angle ) {
-
-		// rotate geometry around world y-axis
-
-		_m1$3.makeRotationY( angle );
-
-		this.applyMatrix4( _m1$3 );
-
-		return this;
-
-	},
-
-	rotateZ: function ( angle ) {
-
-		// rotate geometry around world z-axis
-
-		_m1$3.makeRotationZ( angle );
-
-		this.applyMatrix4( _m1$3 );
-
-		return this;
-
-	},
-
-	translate: function ( x, y, z ) {
-
-		// translate geometry
-
-		_m1$3.makeTranslation( x, y, z );
-
-		this.applyMatrix4( _m1$3 );
-
-		return this;
-
-	},
-
-	scale: function ( x, y, z ) {
-
-		// scale geometry
-
-		_m1$3.makeScale( x, y, z );
-
-		this.applyMatrix4( _m1$3 );
-
-		return this;
-
-	},
-
-	lookAt: function ( vector ) {
-
-		_obj$1.lookAt( vector );
-
-		_obj$1.updateMatrix();
-
-		this.applyMatrix4( _obj$1.matrix );
-
-		return this;
-
-	},
-
-	fromBufferGeometry: function ( geometry ) {
-
-		const scope = this;
-
-		const index = geometry.index !== null ? geometry.index : undefined;
-		const attributes = geometry.attributes;
-
-		if ( attributes.position === undefined ) {
-
-			console.error( 'THREE.Geometry.fromBufferGeometry(): Position attribute required for conversion.' );
-			return this;
-
-		}
-
-		const position = attributes.position;
-		const normal = attributes.normal;
-		const color = attributes.color;
-		const uv = attributes.uv;
-		const uv2 = attributes.uv2;
-
-		if ( uv2 !== undefined ) this.faceVertexUvs[ 1 ] = [];
-
-		for ( let i = 0; i < position.count; i ++ ) {
-
-			scope.vertices.push( new Vector3().fromBufferAttribute( position, i ) );
-
-			if ( color !== undefined ) {
-
-				scope.colors.push( new Color().fromBufferAttribute( color, i ) );
-
-			}
-
-		}
-
-		function addFace( a, b, c, materialIndex ) {
-
-			const vertexColors = ( color === undefined ) ? [] : [
-				scope.colors[ a ].clone(),
-				scope.colors[ b ].clone(),
-				scope.colors[ c ].clone()
-			];
-
-			const vertexNormals = ( normal === undefined ) ? [] : [
-				new Vector3().fromBufferAttribute( normal, a ),
-				new Vector3().fromBufferAttribute( normal, b ),
-				new Vector3().fromBufferAttribute( normal, c )
-			];
-
-			const face = new Face3( a, b, c, vertexNormals, vertexColors, materialIndex );
-
-			scope.faces.push( face );
-
-			if ( uv !== undefined ) {
-
-				scope.faceVertexUvs[ 0 ].push( [
-					new Vector2().fromBufferAttribute( uv, a ),
-					new Vector2().fromBufferAttribute( uv, b ),
-					new Vector2().fromBufferAttribute( uv, c )
-				] );
-
-			}
-
-			if ( uv2 !== undefined ) {
-
-				scope.faceVertexUvs[ 1 ].push( [
-					new Vector2().fromBufferAttribute( uv2, a ),
-					new Vector2().fromBufferAttribute( uv2, b ),
-					new Vector2().fromBufferAttribute( uv2, c )
-				] );
-
-			}
-
-		}
-
-		const groups = geometry.groups;
-
-		if ( groups.length > 0 ) {
-
-			for ( let i = 0; i < groups.length; i ++ ) {
-
-				const group = groups[ i ];
-
-				const start = group.start;
-				const count = group.count;
-
-				for ( let j = start, jl = start + count; j < jl; j += 3 ) {
-
-					if ( index !== undefined ) {
-
-						addFace( index.getX( j ), index.getX( j + 1 ), index.getX( j + 2 ), group.materialIndex );
-
-					} else {
-
-						addFace( j, j + 1, j + 2, group.materialIndex );
-
-					}
-
-				}
-
-			}
-
-		} else {
-
-			if ( index !== undefined ) {
-
-				for ( let i = 0; i < index.count; i += 3 ) {
-
-					addFace( index.getX( i ), index.getX( i + 1 ), index.getX( i + 2 ) );
-
-				}
-
-			} else {
-
-				for ( let i = 0; i < position.count; i += 3 ) {
-
-					addFace( i, i + 1, i + 2 );
-
-				}
-
-			}
-
-		}
-
-		this.computeFaceNormals();
-
-		if ( geometry.boundingBox !== null ) {
-
-			this.boundingBox = geometry.boundingBox.clone();
-
-		}
-
-		if ( geometry.boundingSphere !== null ) {
-
-			this.boundingSphere = geometry.boundingSphere.clone();
-
-		}
-
-		return this;
-
-	},
-
-	center: function () {
-
-		this.computeBoundingBox();
-
-		this.boundingBox.getCenter( _offset$1 ).negate();
-
-		this.translate( _offset$1.x, _offset$1.y, _offset$1.z );
-
-		return this;
-
-	},
-
-	normalize: function () {
-
-		this.computeBoundingSphere();
-
-		const center = this.boundingSphere.center;
-		const radius = this.boundingSphere.radius;
-
-		const s = radius === 0 ? 1 : 1.0 / radius;
-
-		const matrix = new Matrix4();
-		matrix.set(
-			s, 0, 0, - s * center.x,
-			0, s, 0, - s * center.y,
-			0, 0, s, - s * center.z,
-			0, 0, 0, 1
-		);
-
-		this.applyMatrix4( matrix );
-
-		return this;
-
-	},
-
-	computeFaceNormals: function () {
-
-		const cb = new Vector3(), ab = new Vector3();
-
-		for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-			const face = this.faces[ f ];
-
-			const vA = this.vertices[ face.a ];
-			const vB = this.vertices[ face.b ];
-			const vC = this.vertices[ face.c ];
-
-			cb.subVectors( vC, vB );
-			ab.subVectors( vA, vB );
-			cb.cross( ab );
-
-			cb.normalize();
-
-			face.normal.copy( cb );
-
-		}
-
-	},
-
-	computeVertexNormals: function ( areaWeighted ) {
-
-		if ( areaWeighted === undefined ) areaWeighted = true;
-
-		const vertices = new Array( this.vertices.length );
-
-		for ( let v = 0, vl = this.vertices.length; v < vl; v ++ ) {
-
-			vertices[ v ] = new Vector3();
-
-		}
-
-		if ( areaWeighted ) {
-
-			// vertex normals weighted by triangle areas
-			// http://www.iquilezles.org/www/articles/normals/normals.htm
-
-			const cb = new Vector3(), ab = new Vector3();
-
-			for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-				const face = this.faces[ f ];
-
-				const vA = this.vertices[ face.a ];
-				const vB = this.vertices[ face.b ];
-				const vC = this.vertices[ face.c ];
-
-				cb.subVectors( vC, vB );
-				ab.subVectors( vA, vB );
-				cb.cross( ab );
-
-				vertices[ face.a ].add( cb );
-				vertices[ face.b ].add( cb );
-				vertices[ face.c ].add( cb );
-
-			}
-
-		} else {
-
-			this.computeFaceNormals();
-
-			for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-				const face = this.faces[ f ];
-
-				vertices[ face.a ].add( face.normal );
-				vertices[ face.b ].add( face.normal );
-				vertices[ face.c ].add( face.normal );
-
-			}
-
-		}
-
-		for ( let v = 0, vl = this.vertices.length; v < vl; v ++ ) {
-
-			vertices[ v ].normalize();
-
-		}
-
-		for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-			const face = this.faces[ f ];
-
-			const vertexNormals = face.vertexNormals;
-
-			if ( vertexNormals.length === 3 ) {
-
-				vertexNormals[ 0 ].copy( vertices[ face.a ] );
-				vertexNormals[ 1 ].copy( vertices[ face.b ] );
-				vertexNormals[ 2 ].copy( vertices[ face.c ] );
-
-			} else {
-
-				vertexNormals[ 0 ] = vertices[ face.a ].clone();
-				vertexNormals[ 1 ] = vertices[ face.b ].clone();
-				vertexNormals[ 2 ] = vertices[ face.c ].clone();
-
-			}
-
-		}
-
-		if ( this.faces.length > 0 ) {
-
-			this.normalsNeedUpdate = true;
-
-		}
-
-	},
-
-	computeFlatVertexNormals: function () {
-
-		this.computeFaceNormals();
-
-		for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-			const face = this.faces[ f ];
-
-			const vertexNormals = face.vertexNormals;
-
-			if ( vertexNormals.length === 3 ) {
-
-				vertexNormals[ 0 ].copy( face.normal );
-				vertexNormals[ 1 ].copy( face.normal );
-				vertexNormals[ 2 ].copy( face.normal );
-
-			} else {
-
-				vertexNormals[ 0 ] = face.normal.clone();
-				vertexNormals[ 1 ] = face.normal.clone();
-				vertexNormals[ 2 ] = face.normal.clone();
-
-			}
-
-		}
-
-		if ( this.faces.length > 0 ) {
-
-			this.normalsNeedUpdate = true;
-
-		}
-
-	},
-
-	computeMorphNormals: function () {
-
-		// save original normals
-		// - create temp variables on first access
-		//   otherwise just copy (for faster repeated calls)
-
-		for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-			const face = this.faces[ f ];
-
-			if ( ! face.__originalFaceNormal ) {
-
-				face.__originalFaceNormal = face.normal.clone();
-
-			} else {
-
-				face.__originalFaceNormal.copy( face.normal );
-
-			}
-
-			if ( ! face.__originalVertexNormals ) face.__originalVertexNormals = [];
-
-			for ( let i = 0, il = face.vertexNormals.length; i < il; i ++ ) {
-
-				if ( ! face.__originalVertexNormals[ i ] ) {
-
-					face.__originalVertexNormals[ i ] = face.vertexNormals[ i ].clone();
-
-				} else {
-
-					face.__originalVertexNormals[ i ].copy( face.vertexNormals[ i ] );
-
-				}
-
-			}
-
-		}
-
-		// use temp geometry to compute face and vertex normals for each morph
-
-		const tmpGeo = new Geometry();
-		tmpGeo.faces = this.faces;
-
-		for ( let i = 0, il = this.morphTargets.length; i < il; i ++ ) {
-
-			// create on first access
-
-			if ( ! this.morphNormals[ i ] ) {
-
-				this.morphNormals[ i ] = {};
-				this.morphNormals[ i ].faceNormals = [];
-				this.morphNormals[ i ].vertexNormals = [];
-
-				const dstNormalsFace = this.morphNormals[ i ].faceNormals;
-				const dstNormalsVertex = this.morphNormals[ i ].vertexNormals;
-
-				for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-					const faceNormal = new Vector3();
-					const vertexNormals = { a: new Vector3(), b: new Vector3(), c: new Vector3() };
-
-					dstNormalsFace.push( faceNormal );
-					dstNormalsVertex.push( vertexNormals );
-
-				}
-
-			}
-
-			const morphNormals = this.morphNormals[ i ];
-
-			// set vertices to morph target
-
-			tmpGeo.vertices = this.morphTargets[ i ].vertices;
-
-			// compute morph normals
-
-			tmpGeo.computeFaceNormals();
-			tmpGeo.computeVertexNormals();
-
-			// store morph normals
-
-			for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-				const face = this.faces[ f ];
-
-				const faceNormal = morphNormals.faceNormals[ f ];
-				const vertexNormals = morphNormals.vertexNormals[ f ];
-
-				faceNormal.copy( face.normal );
-
-				vertexNormals.a.copy( face.vertexNormals[ 0 ] );
-				vertexNormals.b.copy( face.vertexNormals[ 1 ] );
-				vertexNormals.c.copy( face.vertexNormals[ 2 ] );
-
-			}
-
-		}
-
-		// restore original normals
-
-		for ( let f = 0, fl = this.faces.length; f < fl; f ++ ) {
-
-			const face = this.faces[ f ];
-
-			face.normal = face.__originalFaceNormal;
-			face.vertexNormals = face.__originalVertexNormals;
-
-		}
-
-	},
-
-	computeBoundingBox: function () {
-
-		if ( this.boundingBox === null ) {
-
-			this.boundingBox = new Box3();
-
-		}
-
-		this.boundingBox.setFromPoints( this.vertices );
-
-	},
-
-	computeBoundingSphere: function () {
-
-		if ( this.boundingSphere === null ) {
-
-			this.boundingSphere = new Sphere();
-
-		}
-
-		this.boundingSphere.setFromPoints( this.vertices );
-
-	},
-
-	merge: function ( geometry, matrix, materialIndexOffset ) {
-
-		if ( ! ( geometry && geometry.isGeometry ) ) {
-
-			console.error( 'THREE.Geometry.merge(): geometry not an instance of THREE.Geometry.', geometry );
-			return;
-
-		}
-
-		let normalMatrix;
-		const vertexOffset = this.vertices.length,
-			vertices1 = this.vertices,
-			vertices2 = geometry.vertices,
-			faces1 = this.faces,
-			faces2 = geometry.faces,
-			colors1 = this.colors,
-			colors2 = geometry.colors;
-
-		if ( materialIndexOffset === undefined ) materialIndexOffset = 0;
-
-		if ( matrix !== undefined ) {
-
-			normalMatrix = new Matrix3().getNormalMatrix( matrix );
-
-		}
-
-		// vertices
-
-		for ( let i = 0, il = vertices2.length; i < il; i ++ ) {
-
-			const vertex = vertices2[ i ];
-
-			const vertexCopy = vertex.clone();
-
-			if ( matrix !== undefined ) vertexCopy.applyMatrix4( matrix );
-
-			vertices1.push( vertexCopy );
-
-		}
-
-		// colors
-
-		for ( let i = 0, il = colors2.length; i < il; i ++ ) {
-
-			colors1.push( colors2[ i ].clone() );
-
-		}
-
-		// faces
-
-		for ( let i = 0, il = faces2.length; i < il; i ++ ) {
-
-			const face = faces2[ i ];
-			let normal, color;
-			const faceVertexNormals = face.vertexNormals,
-				faceVertexColors = face.vertexColors;
-
-			const faceCopy = new Face3( face.a + vertexOffset, face.b + vertexOffset, face.c + vertexOffset );
-			faceCopy.normal.copy( face.normal );
-
-			if ( normalMatrix !== undefined ) {
-
-				faceCopy.normal.applyMatrix3( normalMatrix ).normalize();
-
-			}
-
-			for ( let j = 0, jl = faceVertexNormals.length; j < jl; j ++ ) {
-
-				normal = faceVertexNormals[ j ].clone();
-
-				if ( normalMatrix !== undefined ) {
-
-					normal.applyMatrix3( normalMatrix ).normalize();
-
-				}
-
-				faceCopy.vertexNormals.push( normal );
-
-			}
-
-			faceCopy.color.copy( face.color );
-
-			for ( let j = 0, jl = faceVertexColors.length; j < jl; j ++ ) {
-
-				color = faceVertexColors[ j ];
-				faceCopy.vertexColors.push( color.clone() );
-
-			}
-
-			faceCopy.materialIndex = face.materialIndex + materialIndexOffset;
-
-			faces1.push( faceCopy );
-
-		}
-
-		// uvs
-
-		for ( let i = 0, il = geometry.faceVertexUvs.length; i < il; i ++ ) {
-
-			const faceVertexUvs2 = geometry.faceVertexUvs[ i ];
-
-			if ( this.faceVertexUvs[ i ] === undefined ) this.faceVertexUvs[ i ] = [];
-
-			for ( let j = 0, jl = faceVertexUvs2.length; j < jl; j ++ ) {
-
-				const uvs2 = faceVertexUvs2[ j ], uvsCopy = [];
-
-				for ( let k = 0, kl = uvs2.length; k < kl; k ++ ) {
-
-					uvsCopy.push( uvs2[ k ].clone() );
-
-				}
-
-				this.faceVertexUvs[ i ].push( uvsCopy );
-
-			}
-
-		}
-
-	},
-
-	mergeMesh: function ( mesh ) {
-
-		if ( ! ( mesh && mesh.isMesh ) ) {
-
-			console.error( 'THREE.Geometry.mergeMesh(): mesh not an instance of THREE.Mesh.', mesh );
-			return;
-
-		}
-
-		if ( mesh.matrixAutoUpdate ) mesh.updateMatrix();
-
-		this.merge( mesh.geometry, mesh.matrix );
-
-	},
-
-	/*
-	 * Checks for duplicate vertices with hashmap.
-	 * Duplicated vertices are removed
-	 * and faces' vertices are updated.
-	 */
-
-	mergeVertices: function () {
-
-		const verticesMap = {}; // Hashmap for looking up vertices by position coordinates (and making sure they are unique)
-		const unique = [], changes = [];
-
-		const precisionPoints = 4; // number of decimal points, e.g. 4 for epsilon of 0.0001
-		const precision = Math.pow( 10, precisionPoints );
-
-		for ( let i = 0, il = this.vertices.length; i < il; i ++ ) {
-
-			const v = this.vertices[ i ];
-			const key = Math.round( v.x * precision ) + '_' + Math.round( v.y * precision ) + '_' + Math.round( v.z * precision );
-
-			if ( verticesMap[ key ] === undefined ) {
-
-				verticesMap[ key ] = i;
-				unique.push( this.vertices[ i ] );
-				changes[ i ] = unique.length - 1;
-
-			} else {
-
-				//console.log('Duplicate vertex found. ', i, ' could be using ', verticesMap[key]);
-				changes[ i ] = changes[ verticesMap[ key ] ];
-
-			}
-
-		}
-
-
-		// if faces are completely degenerate after merging vertices, we
-		// have to remove them from the geometry.
-		const faceIndicesToRemove = [];
-
-		for ( let i = 0, il = this.faces.length; i < il; i ++ ) {
-
-			const face = this.faces[ i ];
-
-			face.a = changes[ face.a ];
-			face.b = changes[ face.b ];
-			face.c = changes[ face.c ];
-
-			const indices = [ face.a, face.b, face.c ];
-
-			// if any duplicate vertices are found in a Face3
-			// we have to remove the face as nothing can be saved
-			for ( let n = 0; n < 3; n ++ ) {
-
-				if ( indices[ n ] === indices[ ( n + 1 ) % 3 ] ) {
-
-					faceIndicesToRemove.push( i );
-					break;
-
-				}
-
-			}
-
-		}
-
-		for ( let i = faceIndicesToRemove.length - 1; i >= 0; i -- ) {
-
-			const idx = faceIndicesToRemove[ i ];
-
-			this.faces.splice( idx, 1 );
-
-			for ( let j = 0, jl = this.faceVertexUvs.length; j < jl; j ++ ) {
-
-				this.faceVertexUvs[ j ].splice( idx, 1 );
-
-			}
-
-		}
-
-		// Use unique set of vertices
-
-		const diff = this.vertices.length - unique.length;
-		this.vertices = unique;
-		return diff;
-
-	},
-
-	setFromPoints: function ( points ) {
-
-		this.vertices = [];
-
-		for ( let i = 0, l = points.length; i < l; i ++ ) {
-
-			const point = points[ i ];
-			this.vertices.push( new Vector3( point.x, point.y, point.z || 0 ) );
-
-		}
-
-		return this;
-
-	},
-
-	sortFacesByMaterialIndex: function () {
-
-		const faces = this.faces;
-		const length = faces.length;
-
-		// tag faces
-
-		for ( let i = 0; i < length; i ++ ) {
-
-			faces[ i ]._id = i;
-
-		}
-
-		// sort faces
-
-		function materialIndexSort( a, b ) {
-
-			return a.materialIndex - b.materialIndex;
-
-		}
-
-		faces.sort( materialIndexSort );
-
-		// sort uvs
-
-		const uvs1 = this.faceVertexUvs[ 0 ];
-		const uvs2 = this.faceVertexUvs[ 1 ];
-
-		let newUvs1, newUvs2;
-
-		if ( uvs1 && uvs1.length === length ) newUvs1 = [];
-		if ( uvs2 && uvs2.length === length ) newUvs2 = [];
-
-		for ( let i = 0; i < length; i ++ ) {
-
-			const id = faces[ i ]._id;
-
-			if ( newUvs1 ) newUvs1.push( uvs1[ id ] );
-			if ( newUvs2 ) newUvs2.push( uvs2[ id ] );
-
-		}
-
-		if ( newUvs1 ) this.faceVertexUvs[ 0 ] = newUvs1;
-		if ( newUvs2 ) this.faceVertexUvs[ 1 ] = newUvs2;
-
-	},
-
-	toJSON: function () {
-
-		const data = {
-			metadata: {
-				version: 4.5,
-				type: 'Geometry',
-				generator: 'Geometry.toJSON'
-			}
-		};
-
-		// standard Geometry serialization
-
-		data.uuid = this.uuid;
-		data.type = this.type;
-		if ( this.name !== '' ) data.name = this.name;
-
-		if ( this.parameters !== undefined ) {
-
-			const parameters = this.parameters;
-
-			for ( const key in parameters ) {
-
-				if ( parameters[ key ] !== undefined ) data[ key ] = parameters[ key ];
-
-			}
-
-			return data;
-
-		}
-
-		const vertices = [];
-
-		for ( let i = 0; i < this.vertices.length; i ++ ) {
-
-			const vertex = this.vertices[ i ];
-			vertices.push( vertex.x, vertex.y, vertex.z );
-
-		}
-
-		const faces = [];
-		const normals = [];
-		const normalsHash = {};
-		const colors = [];
-		const colorsHash = {};
-		const uvs = [];
-		const uvsHash = {};
-
-		for ( let i = 0; i < this.faces.length; i ++ ) {
-
-			const face = this.faces[ i ];
-
-			const hasMaterial = true;
-			const hasFaceUv = false; // deprecated
-			const hasFaceVertexUv = this.faceVertexUvs[ 0 ][ i ] !== undefined;
-			const hasFaceNormal = face.normal.length() > 0;
-			const hasFaceVertexNormal = face.vertexNormals.length > 0;
-			const hasFaceColor = face.color.r !== 1 || face.color.g !== 1 || face.color.b !== 1;
-			const hasFaceVertexColor = face.vertexColors.length > 0;
-
-			let faceType = 0;
-
-			faceType = setBit( faceType, 0, 0 ); // isQuad
-			faceType = setBit( faceType, 1, hasMaterial );
-			faceType = setBit( faceType, 2, hasFaceUv );
-			faceType = setBit( faceType, 3, hasFaceVertexUv );
-			faceType = setBit( faceType, 4, hasFaceNormal );
-			faceType = setBit( faceType, 5, hasFaceVertexNormal );
-			faceType = setBit( faceType, 6, hasFaceColor );
-			faceType = setBit( faceType, 7, hasFaceVertexColor );
-
-			faces.push( faceType );
-			faces.push( face.a, face.b, face.c );
-			faces.push( face.materialIndex );
-
-			if ( hasFaceVertexUv ) {
-
-				const faceVertexUvs = this.faceVertexUvs[ 0 ][ i ];
-
-				faces.push(
-					getUvIndex( faceVertexUvs[ 0 ] ),
-					getUvIndex( faceVertexUvs[ 1 ] ),
-					getUvIndex( faceVertexUvs[ 2 ] )
-				);
-
-			}
-
-			if ( hasFaceNormal ) {
-
-				faces.push( getNormalIndex( face.normal ) );
-
-			}
-
-			if ( hasFaceVertexNormal ) {
-
-				const vertexNormals = face.vertexNormals;
-
-				faces.push(
-					getNormalIndex( vertexNormals[ 0 ] ),
-					getNormalIndex( vertexNormals[ 1 ] ),
-					getNormalIndex( vertexNormals[ 2 ] )
-				);
-
-			}
-
-			if ( hasFaceColor ) {
-
-				faces.push( getColorIndex( face.color ) );
-
-			}
-
-			if ( hasFaceVertexColor ) {
-
-				const vertexColors = face.vertexColors;
-
-				faces.push(
-					getColorIndex( vertexColors[ 0 ] ),
-					getColorIndex( vertexColors[ 1 ] ),
-					getColorIndex( vertexColors[ 2 ] )
-				);
-
-			}
-
-		}
-
-		function setBit( value, position, enabled ) {
-
-			return enabled ? value | ( 1 << position ) : value & ( ~ ( 1 << position ) );
-
-		}
-
-		function getNormalIndex( normal ) {
-
-			const hash = normal.x.toString() + normal.y.toString() + normal.z.toString();
-
-			if ( normalsHash[ hash ] !== undefined ) {
-
-				return normalsHash[ hash ];
-
-			}
-
-			normalsHash[ hash ] = normals.length / 3;
-			normals.push( normal.x, normal.y, normal.z );
-
-			return normalsHash[ hash ];
-
-		}
-
-		function getColorIndex( color ) {
-
-			const hash = color.r.toString() + color.g.toString() + color.b.toString();
-
-			if ( colorsHash[ hash ] !== undefined ) {
-
-				return colorsHash[ hash ];
-
-			}
-
-			colorsHash[ hash ] = colors.length;
-			colors.push( color.getHex() );
-
-			return colorsHash[ hash ];
-
-		}
-
-		function getUvIndex( uv ) {
-
-			const hash = uv.x.toString() + uv.y.toString();
-
-			if ( uvsHash[ hash ] !== undefined ) {
-
-				return uvsHash[ hash ];
-
-			}
-
-			uvsHash[ hash ] = uvs.length / 2;
-			uvs.push( uv.x, uv.y );
-
-			return uvsHash[ hash ];
-
-		}
-
-		data.data = {};
-
-		data.data.vertices = vertices;
-		data.data.normals = normals;
-		if ( colors.length > 0 ) data.data.colors = colors;
-		if ( uvs.length > 0 ) data.data.uvs = [ uvs ]; // temporal backward compatibility
-		data.data.faces = faces;
-
-		return data;
-
-	},
-
-	clone: function () {
-
-		/*
-		 // Handle primitives
-
-		 const parameters = this.parameters;
-
-		 if ( parameters !== undefined ) {
-
-		 const values = [];
-
-		 for ( const key in parameters ) {
-
-		 values.push( parameters[ key ] );
-
-		 }
-
-		 const geometry = Object.create( this.constructor.prototype );
-		 this.constructor.apply( geometry, values );
-		 return geometry;
-
-		 }
-
-		 return new this.constructor().copy( this );
-		 */
-
-		return new Geometry().copy( this );
-
-	},
-
-	copy: function ( source ) {
-
-		// reset
-
-		this.vertices = [];
-		this.colors = [];
-		this.faces = [];
-		this.faceVertexUvs = [[]];
-		this.morphTargets = [];
-		this.morphNormals = [];
-		this.skinWeights = [];
-		this.skinIndices = [];
-		this.lineDistances = [];
-		this.boundingBox = null;
-		this.boundingSphere = null;
-
-		// name
-
-		this.name = source.name;
-
-		// vertices
-
-		const vertices = source.vertices;
-
-		for ( let i = 0, il = vertices.length; i < il; i ++ ) {
-
-			this.vertices.push( vertices[ i ].clone() );
-
-		}
-
-		// colors
-
-		const colors = source.colors;
-
-		for ( let i = 0, il = colors.length; i < il; i ++ ) {
-
-			this.colors.push( colors[ i ].clone() );
-
-		}
-
-		// faces
-
-		const faces = source.faces;
-
-		for ( let i = 0, il = faces.length; i < il; i ++ ) {
-
-			this.faces.push( faces[ i ].clone() );
-
-		}
-
-		// face vertex uvs
-
-		for ( let i = 0, il = source.faceVertexUvs.length; i < il; i ++ ) {
-
-			const faceVertexUvs = source.faceVertexUvs[ i ];
-
-			if ( this.faceVertexUvs[ i ] === undefined ) {
-
-				this.faceVertexUvs[ i ] = [];
-
-			}
-
-			for ( let j = 0, jl = faceVertexUvs.length; j < jl; j ++ ) {
-
-				const uvs = faceVertexUvs[ j ], uvsCopy = [];
-
-				for ( let k = 0, kl = uvs.length; k < kl; k ++ ) {
-
-					const uv = uvs[ k ];
-
-					uvsCopy.push( uv.clone() );
-
-				}
-
-				this.faceVertexUvs[ i ].push( uvsCopy );
-
-			}
-
-		}
-
-		// morph targets
-
-		const morphTargets = source.morphTargets;
-
-		for ( let i = 0, il = morphTargets.length; i < il; i ++ ) {
-
-			const morphTarget = {};
-			morphTarget.name = morphTargets[ i ].name;
-
-			// vertices
-
-			if ( morphTargets[ i ].vertices !== undefined ) {
-
-				morphTarget.vertices = [];
-
-				for ( let j = 0, jl = morphTargets[ i ].vertices.length; j < jl; j ++ ) {
-
-					morphTarget.vertices.push( morphTargets[ i ].vertices[ j ].clone() );
-
-				}
-
-			}
-
-			// normals
-
-			if ( morphTargets[ i ].normals !== undefined ) {
-
-				morphTarget.normals = [];
-
-				for ( let j = 0, jl = morphTargets[ i ].normals.length; j < jl; j ++ ) {
-
-					morphTarget.normals.push( morphTargets[ i ].normals[ j ].clone() );
-
-				}
-
-			}
-
-			this.morphTargets.push( morphTarget );
-
-		}
-
-		// morph normals
-
-		const morphNormals = source.morphNormals;
-
-		for ( let i = 0, il = morphNormals.length; i < il; i ++ ) {
-
-			const morphNormal = {};
-
-			// vertex normals
-
-			if ( morphNormals[ i ].vertexNormals !== undefined ) {
-
-				morphNormal.vertexNormals = [];
-
-				for ( let j = 0, jl = morphNormals[ i ].vertexNormals.length; j < jl; j ++ ) {
-
-					const srcVertexNormal = morphNormals[ i ].vertexNormals[ j ];
-					const destVertexNormal = {};
-
-					destVertexNormal.a = srcVertexNormal.a.clone();
-					destVertexNormal.b = srcVertexNormal.b.clone();
-					destVertexNormal.c = srcVertexNormal.c.clone();
-
-					morphNormal.vertexNormals.push( destVertexNormal );
-
-				}
-
-			}
-
-			// face normals
-
-			if ( morphNormals[ i ].faceNormals !== undefined ) {
-
-				morphNormal.faceNormals = [];
-
-				for ( let j = 0, jl = morphNormals[ i ].faceNormals.length; j < jl; j ++ ) {
-
-					morphNormal.faceNormals.push( morphNormals[ i ].faceNormals[ j ].clone() );
-
-				}
-
-			}
-
-			this.morphNormals.push( morphNormal );
-
-		}
-
-		// skin weights
-
-		const skinWeights = source.skinWeights;
-
-		for ( let i = 0, il = skinWeights.length; i < il; i ++ ) {
-
-			this.skinWeights.push( skinWeights[ i ].clone() );
-
-		}
-
-		// skin indices
-
-		const skinIndices = source.skinIndices;
-
-		for ( let i = 0, il = skinIndices.length; i < il; i ++ ) {
-
-			this.skinIndices.push( skinIndices[ i ].clone() );
-
-		}
-
-		// line distances
-
-		const lineDistances = source.lineDistances;
-
-		for ( let i = 0, il = lineDistances.length; i < il; i ++ ) {
-
-			this.lineDistances.push( lineDistances[ i ] );
-
-		}
-
-		// bounding box
-
-		const boundingBox = source.boundingBox;
-
-		if ( boundingBox !== null ) {
-
-			this.boundingBox = boundingBox.clone();
-
-		}
-
-		// bounding sphere
-
-		const boundingSphere = source.boundingSphere;
-
-		if ( boundingSphere !== null ) {
-
-			this.boundingSphere = boundingSphere.clone();
-
-		}
-
-		// update flags
-
-		this.elementsNeedUpdate = source.elementsNeedUpdate;
-		this.verticesNeedUpdate = source.verticesNeedUpdate;
-		this.uvsNeedUpdate = source.uvsNeedUpdate;
-		this.normalsNeedUpdate = source.normalsNeedUpdate;
-		this.colorsNeedUpdate = source.colorsNeedUpdate;
-		this.lineDistancesNeedUpdate = source.lineDistancesNeedUpdate;
-		this.groupsNeedUpdate = source.groupsNeedUpdate;
-
-		return this;
-
-	},
-
-	dispose: function () {
-
-		this.dispatchEvent( { type: 'dispose' } );
-
-	}
-
-} );
 
 const _v0$2 = new Vector3();
 const _v1$5 = new Vector3();
@@ -30836,13 +29418,13 @@ function addContour( vertices, contour ) {
  * }
  */
 
-class ExtrudeBufferGeometry extends BufferGeometry {
+class ExtrudeGeometry extends BufferGeometry {
 
 	constructor( shapes, options ) {
 
 		super();
 
-		this.type = 'ExtrudeBufferGeometry';
+		this.type = 'ExtrudeGeometry';
 
 		this.parameters = {
 			shapes: shapes,
@@ -30985,7 +29567,7 @@ class ExtrudeBufferGeometry extends BufferGeometry {
 
 			function scalePt2( pt, vec, size ) {
 
-				if ( ! vec ) console.error( "THREE.ExtrudeGeometry: vec does not exist" );
+				if ( ! vec ) console.error( 'THREE.ExtrudeGeometry: vec does not exist' );
 
 				return vec.clone().multiplyScalar( size ).add( pt );
 
@@ -31592,94 +30174,15 @@ function toJSON( shapes, options, data ) {
 }
 
 /**
- * Creates extruded geometry from a path shape.
- *
- * parameters = {
- *
- *  curveSegments: <int>, // number of points on the curves
- *  steps: <int>, // number of points for z-side extrusions / used for subdividing segments of extrude spline too
- *  depth: <float>, // Depth to extrude the shape
- *
- *  bevelEnabled: <bool>, // turn on bevel
- *  bevelThickness: <float>, // how deep into the original shape bevel goes
- *  bevelSize: <float>, // how far from shape outline (including bevelOffset) is bevel
- *  bevelOffset: <float>, // how far from shape outline does bevel start
- *  bevelSegments: <int>, // number of bevel layers
- *
- *  extrudePath: <THREE.Curve> // curve to extrude shape along
- *
- *  UVGenerator: <Object> // object that provides UV generator functions
- *
- * }
- */
-
-class ExtrudeGeometry extends Geometry {
-
-	constructor( shapes, options ) {
-
-		super();
-
-		this.type = 'ExtrudeGeometry';
-
-		this.parameters = {
-			shapes: shapes,
-			options: options
-		};
-
-		this.fromBufferGeometry( new ExtrudeBufferGeometry( shapes, options ) );
-		this.mergeVertices();
-
-	}
-
-	toJSON() {
-
-		const data = super.toJSON();
-
-		const shapes = this.parameters.shapes;
-		const options = this.parameters.options;
-
-		return toJSON$1( shapes, options, data );
-
-	}
-
-}
-
-function toJSON$1( shapes, options, data ) {
-
-	data.shapes = [];
-
-	if ( Array.isArray( shapes ) ) {
-
-		for ( let i = 0, l = shapes.length; i < l; i ++ ) {
-
-			const shape = shapes[ i ];
-
-			data.shapes.push( shape.uuid );
-
-		}
-
-	} else {
-
-		data.shapes.push( shapes.uuid );
-
-	}
-
-	if ( options.extrudePath !== undefined ) data.options.extrudePath = options.extrudePath.toJSON();
-
-	return data;
-
-}
-
-/**
  * Parametric Surfaces Geometry
  * based on the brilliant article by @prideout https://prideout.net/blog/old/blog/index.html@p=44.html
  */
 
-function ParametricBufferGeometry( func, slices, stacks ) {
+function ParametricGeometry( func, slices, stacks ) {
 
 	BufferGeometry.call( this );
 
-	this.type = 'ParametricBufferGeometry';
+	this.type = 'ParametricGeometry';
 
 	this.parameters = {
 		func: func,
@@ -31794,47 +30297,20 @@ function ParametricBufferGeometry( func, slices, stacks ) {
 
 }
 
-ParametricBufferGeometry.prototype = Object.create( BufferGeometry.prototype );
-ParametricBufferGeometry.prototype.constructor = ParametricBufferGeometry;
-
-/**
- * Parametric Surfaces Geometry
- * based on the brilliant article by @prideout https://prideout.net/blog/old/blog/index.html@p=44.html
- */
-
-function ParametricGeometry( func, slices, stacks ) {
-
-	Geometry.call( this );
-
-	this.type = 'ParametricGeometry';
-
-	this.parameters = {
-		func: func,
-		slices: slices,
-		stacks: stacks
-	};
-
-	this.fromBufferGeometry( new ParametricBufferGeometry( func, slices, stacks ) );
-	this.mergeVertices();
-
-}
-
-ParametricGeometry.prototype = Object.create( Geometry.prototype );
+ParametricGeometry.prototype = Object.create( BufferGeometry.prototype );
 ParametricGeometry.prototype.constructor = ParametricGeometry;
 
-class ShapeBufferGeometry extends BufferGeometry {
+class ShapeGeometry extends BufferGeometry {
 
-	constructor( shapes, curveSegments ) {
+	constructor( shapes, curveSegments = 12 ) {
 
 		super();
-		this.type = 'ShapeBufferGeometry';
+		this.type = 'ShapeGeometry';
 
 		this.parameters = {
 			shapes: shapes,
 			curveSegments: curveSegments
 		};
-
-		curveSegments = curveSegments || 12;
 
 		// buffers
 
@@ -31955,74 +30431,13 @@ class ShapeBufferGeometry extends BufferGeometry {
 
 		const shapes = this.parameters.shapes;
 
-		return toJSON$2( shapes, data );
+		return toJSON$1( shapes, data );
 
 	}
 
 }
 
-function toJSON$2( shapes, data ) {
-
-	data.shapes = [];
-
-	if ( Array.isArray( shapes ) ) {
-
-		for ( let i = 0, l = shapes.length; i < l; i ++ ) {
-
-			const shape = shapes[ i ];
-
-			data.shapes.push( shape.uuid );
-
-		}
-
-	} else {
-
-		data.shapes.push( shapes.uuid );
-
-	}
-
-	return data;
-
-}
-
-class ShapeGeometry extends Geometry {
-
-	constructor( shapes, curveSegments ) {
-
-		super();
-		this.type = 'ShapeGeometry';
-
-		if ( typeof curveSegments === 'object' ) {
-
-			console.warn( 'THREE.ShapeGeometry: Options parameter has been removed.' );
-
-			curveSegments = curveSegments.curveSegments;
-
-		}
-
-		this.parameters = {
-			shapes: shapes,
-			curveSegments: curveSegments
-		};
-
-		this.fromBufferGeometry( new ShapeBufferGeometry( shapes, curveSegments ) );
-		this.mergeVertices();
-
-	}
-
-	toJSON() {
-
-		const data = Geometry.prototype.toJSON.call( this );
-
-		const shapes = this.parameters.shapes;
-
-		return toJSON$3( shapes, data );
-
-	}
-
-}
-
-function toJSON$3( shapes, data ) {
+function toJSON$1( shapes, data ) {
 
 	data.shapes = [];
 
@@ -33202,9 +31617,7 @@ const AnimationUtils = {
 
 	},
 
-	subclip: function ( sourceClip, name, startFrame, endFrame, fps ) {
-
-		fps = fps || 30;
+	subclip: function ( sourceClip, name, startFrame, endFrame, fps = 30 ) {
 
 		const clip = sourceClip.clone();
 
@@ -33275,11 +31688,9 @@ const AnimationUtils = {
 
 	},
 
-	makeClipAdditive: function ( targetClip, referenceFrame, referenceClip, fps ) {
+	makeClipAdditive: function ( targetClip, referenceFrame = 0, referenceClip = targetClip, fps = 30 ) {
 
-		if ( referenceFrame === undefined ) referenceFrame = 0;
-		if ( referenceClip === undefined ) referenceClip = targetClip;
-		if ( fps === undefined || fps <= 0 ) fps = 30;
+		if ( fps <= 0 ) fps = 30;
 
 		const numTracks = referenceClip.tracks.length;
 		const referenceTime = referenceFrame / fps;
@@ -33982,8 +32393,8 @@ Object.assign( KeyframeTrack.prototype, {
 
 		if ( factoryMethod === undefined ) {
 
-			const message = "unsupported interpolation for " +
-				this.ValueTypeName + " keyframe track named " + this.name;
+			const message = 'unsupported interpolation for ' +
+				this.ValueTypeName + ' keyframe track named ' + this.name;
 
 			if ( this.createInterpolant === undefined ) {
 
@@ -34220,7 +32631,7 @@ Object.assign( KeyframeTrack.prototype, {
 
 			// remove adjacent keyframes scheduled at the same time
 
-			if ( time !== timeNext && ( i !== 1 || time !== time[ 0 ] ) ) {
+			if ( time !== timeNext && ( i !== 1 || time !== times[ 0 ] ) ) {
 
 				if ( ! smoothInterpolation ) {
 
@@ -34514,12 +32925,12 @@ VectorKeyframeTrack.prototype = Object.assign( Object.create( KeyframeTrack.prot
 
 } );
 
-function AnimationClip( name, duration, tracks, blendMode ) {
+function AnimationClip( name, duration = - 1, tracks, blendMode = NormalAnimationBlendMode ) {
 
 	this.name = name;
 	this.tracks = tracks;
-	this.duration = ( duration !== undefined ) ? duration : - 1;
-	this.blendMode = ( blendMode !== undefined ) ? blendMode : NormalAnimationBlendMode;
+	this.duration = duration;
+	this.blendMode = blendMode;
 
 	this.uuid = MathUtils.generateUUID();
 
@@ -34623,7 +33034,10 @@ Object.assign( AnimationClip, {
 
 		}
 
-		return new AnimationClip( json.name, json.duration, tracks, json.blendMode );
+		const clip = new AnimationClip( json.name, json.duration, tracks, json.blendMode );
+		clip.uuid = json.uuid;
+
+		return clip;
 
 	},
 
@@ -34964,6 +33378,12 @@ Object.assign( AnimationClip.prototype, {
 		}
 
 		return new AnimationClip( this.name, this.duration, tracks, this.blendMode );
+
+	},
+
+	toJSON: function () {
+
+		return AnimationClip.toJSON( this );
 
 	}
 
@@ -35592,7 +34012,6 @@ CompressedTextureLoader.prototype = Object.assign( Object.create( Loader.prototy
 		const images = [];
 
 		const texture = new CompressedTexture();
-		texture.image = images;
 
 		const loader = new FileLoader( this.manager );
 		loader.setPath( this.path );
@@ -35619,9 +34038,9 @@ CompressedTextureLoader.prototype = Object.assign( Object.create( Loader.prototy
 
 				if ( loaded === 6 ) {
 
-					if ( texDatas.mipmapCount === 1 )
-						texture.minFilter = LinearFilter;
+					if ( texDatas.mipmapCount === 1 ) texture.minFilter = LinearFilter;
 
+					texture.image = images;
 					texture.format = texDatas.format;
 					texture.needsUpdate = true;
 
@@ -35667,6 +34086,8 @@ CompressedTextureLoader.prototype = Object.assign( Object.create( Loader.prototy
 						}
 
 					}
+
+					texture.image = images;
 
 				} else {
 
@@ -35884,6 +34305,18 @@ DataTextureLoader.prototype = Object.assign( Object.create( Loader.prototype ), 
 
 			texture.anisotropy = texData.anisotropy !== undefined ? texData.anisotropy : 1;
 
+			if ( texData.encoding !== undefined ) {
+
+				texture.encoding = texData.encoding;
+
+			}
+
+			if ( texData.flipY !== undefined ) {
+
+				texture.flipY = texData.flipY;
+
+			}
+
 			if ( texData.format !== undefined ) {
 
 				texture.format = texData.format;
@@ -36026,9 +34459,7 @@ Object.assign( Curve.prototype, {
 
 	// Get sequence of points using getPoint( t )
 
-	getPoints: function ( divisions ) {
-
-		if ( divisions === undefined ) divisions = 5;
+	getPoints: function ( divisions = 5 ) {
 
 		const points = [];
 
@@ -36044,9 +34475,7 @@ Object.assign( Curve.prototype, {
 
 	// Get sequence of points using getPointAt( u )
 
-	getSpacedPoints: function ( divisions ) {
-
-		if ( divisions === undefined ) divisions = 5;
+	getSpacedPoints: function ( divisions = 5 ) {
 
 		const points = [];
 
@@ -36625,16 +35054,16 @@ function CubicPoly() {
 const tmp = new Vector3();
 const px = new CubicPoly(), py = new CubicPoly(), pz = new CubicPoly();
 
-function CatmullRomCurve3( points, closed, curveType, tension ) {
+function CatmullRomCurve3( points = [], closed = false, curveType = 'centripetal', tension = 0.5 ) {
 
 	Curve.call( this );
 
 	this.type = 'CatmullRomCurve3';
 
-	this.points = points || [];
-	this.closed = closed || false;
-	this.curveType = curveType || 'centripetal';
-	this.tension = ( tension !== undefined ) ? tension : 0.5;
+	this.points = points;
+	this.closed = closed;
+	this.curveType = curveType;
+	this.tension = tension;
 
 }
 
@@ -36643,9 +35072,9 @@ CatmullRomCurve3.prototype.constructor = CatmullRomCurve3;
 
 CatmullRomCurve3.prototype.isCatmullRomCurve3 = true;
 
-CatmullRomCurve3.prototype.getPoint = function ( t, optionalTarget ) {
+CatmullRomCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
 
-	const point = optionalTarget || new Vector3();
+	const point = optionalTarget;
 
 	const points = this.points;
 	const l = points.length;
@@ -36871,16 +35300,16 @@ function CubicBezier( t, p0, p1, p2, p3 ) {
 
 }
 
-function CubicBezierCurve( v0, v1, v2, v3 ) {
+function CubicBezierCurve( v0 = new Vector2(), v1 = new Vector2(), v2 = new Vector2(), v3 = new Vector2() ) {
 
 	Curve.call( this );
 
 	this.type = 'CubicBezierCurve';
 
-	this.v0 = v0 || new Vector2();
-	this.v1 = v1 || new Vector2();
-	this.v2 = v2 || new Vector2();
-	this.v3 = v3 || new Vector2();
+	this.v0 = v0;
+	this.v1 = v1;
+	this.v2 = v2;
+	this.v3 = v3;
 
 }
 
@@ -36889,9 +35318,9 @@ CubicBezierCurve.prototype.constructor = CubicBezierCurve;
 
 CubicBezierCurve.prototype.isCubicBezierCurve = true;
 
-CubicBezierCurve.prototype.getPoint = function ( t, optionalTarget ) {
+CubicBezierCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
 
-	const point = optionalTarget || new Vector2();
+	const point = optionalTarget;
 
 	const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
 
@@ -36943,16 +35372,16 @@ CubicBezierCurve.prototype.fromJSON = function ( json ) {
 
 };
 
-function CubicBezierCurve3( v0, v1, v2, v3 ) {
+function CubicBezierCurve3( v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3(), v3 = new Vector3() ) {
 
 	Curve.call( this );
 
 	this.type = 'CubicBezierCurve3';
 
-	this.v0 = v0 || new Vector3();
-	this.v1 = v1 || new Vector3();
-	this.v2 = v2 || new Vector3();
-	this.v3 = v3 || new Vector3();
+	this.v0 = v0;
+	this.v1 = v1;
+	this.v2 = v2;
+	this.v3 = v3;
 
 }
 
@@ -36961,9 +35390,9 @@ CubicBezierCurve3.prototype.constructor = CubicBezierCurve3;
 
 CubicBezierCurve3.prototype.isCubicBezierCurve3 = true;
 
-CubicBezierCurve3.prototype.getPoint = function ( t, optionalTarget ) {
+CubicBezierCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
 
-	const point = optionalTarget || new Vector3();
+	const point = optionalTarget;
 
 	const v0 = this.v0, v1 = this.v1, v2 = this.v2, v3 = this.v3;
 
@@ -37016,14 +35445,14 @@ CubicBezierCurve3.prototype.fromJSON = function ( json ) {
 
 };
 
-function LineCurve( v1, v2 ) {
+function LineCurve( v1 = new Vector2(), v2 = new Vector2() ) {
 
 	Curve.call( this );
 
 	this.type = 'LineCurve';
 
-	this.v1 = v1 || new Vector2();
-	this.v2 = v2 || new Vector2();
+	this.v1 = v1;
+	this.v2 = v2;
 
 }
 
@@ -37032,9 +35461,9 @@ LineCurve.prototype.constructor = LineCurve;
 
 LineCurve.prototype.isLineCurve = true;
 
-LineCurve.prototype.getPoint = function ( t, optionalTarget ) {
+LineCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
 
-	const point = optionalTarget || new Vector2();
+	const point = optionalTarget;
 
 	if ( t === 1 ) {
 
@@ -37102,14 +35531,14 @@ LineCurve.prototype.fromJSON = function ( json ) {
 
 };
 
-function LineCurve3( v1, v2 ) {
+function LineCurve3( v1 = new Vector3(), v2 = new Vector3() ) {
 
 	Curve.call( this );
 
 	this.type = 'LineCurve3';
 
-	this.v1 = v1 || new Vector3();
-	this.v2 = v2 || new Vector3();
+	this.v1 = v1;
+	this.v2 = v2;
 
 }
 
@@ -37118,9 +35547,9 @@ LineCurve3.prototype.constructor = LineCurve3;
 
 LineCurve3.prototype.isLineCurve3 = true;
 
-LineCurve3.prototype.getPoint = function ( t, optionalTarget ) {
+LineCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
 
-	const point = optionalTarget || new Vector3();
+	const point = optionalTarget;
 
 	if ( t === 1 ) {
 
@@ -37178,15 +35607,15 @@ LineCurve3.prototype.fromJSON = function ( json ) {
 
 };
 
-function QuadraticBezierCurve( v0, v1, v2 ) {
+function QuadraticBezierCurve( v0 = new Vector2(), v1 = new Vector2(), v2 = new Vector2() ) {
 
 	Curve.call( this );
 
 	this.type = 'QuadraticBezierCurve';
 
-	this.v0 = v0 || new Vector2();
-	this.v1 = v1 || new Vector2();
-	this.v2 = v2 || new Vector2();
+	this.v0 = v0;
+	this.v1 = v1;
+	this.v2 = v2;
 
 }
 
@@ -37195,9 +35624,9 @@ QuadraticBezierCurve.prototype.constructor = QuadraticBezierCurve;
 
 QuadraticBezierCurve.prototype.isQuadraticBezierCurve = true;
 
-QuadraticBezierCurve.prototype.getPoint = function ( t, optionalTarget ) {
+QuadraticBezierCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
 
-	const point = optionalTarget || new Vector2();
+	const point = optionalTarget;
 
 	const v0 = this.v0, v1 = this.v1, v2 = this.v2;
 
@@ -37246,15 +35675,15 @@ QuadraticBezierCurve.prototype.fromJSON = function ( json ) {
 
 };
 
-function QuadraticBezierCurve3( v0, v1, v2 ) {
+function QuadraticBezierCurve3( v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3() ) {
 
 	Curve.call( this );
 
 	this.type = 'QuadraticBezierCurve3';
 
-	this.v0 = v0 || new Vector3();
-	this.v1 = v1 || new Vector3();
-	this.v2 = v2 || new Vector3();
+	this.v0 = v0;
+	this.v1 = v1;
+	this.v2 = v2;
 
 }
 
@@ -37263,9 +35692,9 @@ QuadraticBezierCurve3.prototype.constructor = QuadraticBezierCurve3;
 
 QuadraticBezierCurve3.prototype.isQuadraticBezierCurve3 = true;
 
-QuadraticBezierCurve3.prototype.getPoint = function ( t, optionalTarget ) {
+QuadraticBezierCurve3.prototype.getPoint = function ( t, optionalTarget = new Vector3() ) {
 
-	const point = optionalTarget || new Vector3();
+	const point = optionalTarget;
 
 	const v0 = this.v0, v1 = this.v1, v2 = this.v2;
 
@@ -37315,13 +35744,13 @@ QuadraticBezierCurve3.prototype.fromJSON = function ( json ) {
 
 };
 
-function SplineCurve( points ) {
+function SplineCurve( points = [] ) {
 
 	Curve.call( this );
 
 	this.type = 'SplineCurve';
 
-	this.points = points || [];
+	this.points = points;
 
 }
 
@@ -37330,9 +35759,9 @@ SplineCurve.prototype.constructor = SplineCurve;
 
 SplineCurve.prototype.isSplineCurve = true;
 
-SplineCurve.prototype.getPoint = function ( t, optionalTarget ) {
+SplineCurve.prototype.getPoint = function ( t, optionalTarget = new Vector2() ) {
 
-	const point = optionalTarget || new Vector2();
+	const point = optionalTarget;
 
 	const points = this.points;
 	const p = ( points.length - 1 ) * t;
@@ -37553,9 +35982,7 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 	},
 
-	getSpacedPoints: function ( divisions ) {
-
-		if ( divisions === undefined ) divisions = 40;
+	getSpacedPoints: function ( divisions = 40 ) {
 
 		const points = [];
 
@@ -37575,9 +36002,7 @@ CurvePath.prototype = Object.assign( Object.create( Curve.prototype ), {
 
 	},
 
-	getPoints: function ( divisions ) {
-
-		divisions = divisions || 12;
+	getPoints: function ( divisions = 12 ) {
 
 		const points = [];
 		let last;
@@ -37960,14 +36385,14 @@ Shape.prototype = Object.assign( Object.create( Path.prototype ), {
 
 } );
 
-function Light( color, intensity ) {
+function Light( color, intensity = 1 ) {
 
 	Object3D.call( this );
 
 	this.type = 'Light';
 
 	this.color = new Color( color );
-	this.intensity = intensity !== undefined ? intensity : 1;
+	this.intensity = intensity;
 
 }
 
@@ -38323,9 +36748,7 @@ PointLightShadow.prototype = Object.assign( Object.create( LightShadow.prototype
 
 	isPointLightShadow: true,
 
-	updateMatrices: function ( light, viewportIndex ) {
-
-		if ( viewportIndex === undefined ) viewportIndex = 0;
+	updateMatrices: function ( light, viewportIndex = 0 ) {
 
 		const camera = this.camera,
 			shadowMatrix = this.matrix,
@@ -38402,7 +36825,7 @@ PointLight.prototype = Object.assign( Object.create( Light.prototype ), {
 
 } );
 
-function OrthographicCamera( left, right, top, bottom, near, far ) {
+function OrthographicCamera( left = - 1, right = 1, top = 1, bottom = - 1, near = 0.1, far = 2000 ) {
 
 	Camera.call( this );
 
@@ -38411,13 +36834,13 @@ function OrthographicCamera( left, right, top, bottom, near, far ) {
 	this.zoom = 1;
 	this.view = null;
 
-	this.left = ( left !== undefined ) ? left : - 1;
-	this.right = ( right !== undefined ) ? right : 1;
-	this.top = ( top !== undefined ) ? top : 1;
-	this.bottom = ( bottom !== undefined ) ? bottom : - 1;
+	this.left = left;
+	this.right = right;
+	this.top = top;
+	this.bottom = bottom;
 
-	this.near = ( near !== undefined ) ? near : 0.1;
-	this.far = ( far !== undefined ) ? far : 2000;
+	this.near = near;
+	this.far = far;
 
 	this.updateProjectionMatrix();
 
@@ -38513,7 +36936,7 @@ OrthographicCamera.prototype = Object.assign( Object.create( Camera.prototype ),
 
 		this.projectionMatrix.makeOrthographic( left, right, top, bottom, this.near, this.far );
 
-		this.projectionMatrixInverse.getInverse( this.projectionMatrix );
+		this.projectionMatrixInverse.copy( this.projectionMatrix ).invert();
 
 	},
 
@@ -38834,9 +37257,7 @@ class SphericalHarmonics3 {
 
 	}
 
-	fromArray( array, offset ) {
-
-		if ( offset === undefined ) offset = 0;
+	fromArray( array, offset = 0 ) {
 
 		const coefficients = this.coefficients;
 
@@ -38850,10 +37271,7 @@ class SphericalHarmonics3 {
 
 	}
 
-	toArray( array, offset ) {
-
-		if ( array === undefined ) array = [];
-		if ( offset === undefined ) offset = 0;
+	toArray( array = [], offset = 0 ) {
 
 		const coefficients = this.coefficients;
 
@@ -39007,12 +37425,12 @@ MaterialLoader.prototype = Object.assign( Object.create( Loader.prototype ), {
 
 		if ( json.uuid !== undefined ) material.uuid = json.uuid;
 		if ( json.name !== undefined ) material.name = json.name;
-		if ( json.color !== undefined ) material.color.setHex( json.color );
+		if ( json.color !== undefined && material.color !== undefined ) material.color.setHex( json.color );
 		if ( json.roughness !== undefined ) material.roughness = json.roughness;
 		if ( json.metalness !== undefined ) material.metalness = json.metalness;
 		if ( json.sheen !== undefined ) material.sheen = new Color().setHex( json.sheen );
-		if ( json.emissive !== undefined ) material.emissive.setHex( json.emissive );
-		if ( json.specular !== undefined ) material.specular.setHex( json.specular );
+		if ( json.emissive !== undefined && material.emissive !== undefined ) material.emissive.setHex( json.emissive );
+		if ( json.specular !== undefined && material.specular !== undefined ) material.specular.setHex( json.specular );
 		if ( json.shininess !== undefined ) material.shininess = json.shininess;
 		if ( json.clearcoat !== undefined ) material.clearcoat = json.clearcoat;
 		if ( json.clearcoatRoughness !== undefined ) material.clearcoatRoughness = json.clearcoatRoughness;
@@ -39426,7 +37844,7 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 
 			const buffer = getArrayBuffer( json, interleavedBuffer.buffer );
 
-			const array = new TYPED_ARRAYS[ interleavedBuffer.type ]( buffer );
+			const array = getTypedArray( interleavedBuffer.type, buffer );
 			const ib = new InterleavedBuffer( array, interleavedBuffer.stride );
 			ib.uuid = interleavedBuffer.uuid;
 
@@ -39457,7 +37875,7 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 
 		if ( index !== undefined ) {
 
-			const typedArray = new TYPED_ARRAYS[ index.type ]( index.array );
+			const typedArray = getTypedArray( index.type, index.array );
 			geometry.setIndex( new BufferAttribute( typedArray, 1 ) );
 
 		}
@@ -39476,7 +37894,7 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 
 			} else {
 
-				const typedArray = new TYPED_ARRAYS[ attribute.type ]( attribute.array );
+				const typedArray = getTypedArray( attribute.type, attribute.array );
 				const bufferAttributeConstr = attribute.isInstancedBufferAttribute ? InstancedBufferAttribute : BufferAttribute;
 				bufferAttribute = new bufferAttributeConstr( typedArray, attribute.itemSize, attribute.normalized );
 
@@ -39509,7 +37927,7 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 
 					} else {
 
-						const typedArray = new TYPED_ARRAYS[ attribute.type ]( attribute.array );
+						const typedArray = getTypedArray( attribute.type, attribute.array );
 						bufferAttribute = new BufferAttribute( typedArray, attribute.itemSize, attribute.normalized );
 
 					}
@@ -39571,19 +37989,6 @@ BufferGeometryLoader.prototype = Object.assign( Object.create( Loader.prototype 
 	}
 
 } );
-
-const TYPED_ARRAYS = {
-	Int8Array: Int8Array,
-	Uint8Array: Uint8Array,
-	// Workaround for IE11 pre KB2929437. See #11440
-	Uint8ClampedArray: typeof Uint8ClampedArray !== 'undefined' ? Uint8ClampedArray : Uint8Array,
-	Int16Array: Int16Array,
-	Uint16Array: Uint16Array,
-	Int32Array: Int32Array,
-	Uint32Array: Uint32Array,
-	Float32Array: Float32Array,
-	Float64Array: Float64Array
-};
 
 function ImageBitmapLoader( manager ) {
 
@@ -39969,21 +38374,19 @@ Object.assign( ShapePath.prototype, {
 
 } );
 
-function Font( data ) {
+class Font {
 
-	this.type = 'Font';
+	constructor( data ) {
 
-	this.data = data;
+		Object.defineProperty( this, 'isFont', { value: true } );
 
-}
+		this.type = 'Font';
 
-Object.assign( Font.prototype, {
+		this.data = data;
 
-	isFont: true,
+	}
 
-	generateShapes: function ( text, size ) {
-
-		if ( size === undefined ) size = 100;
+	generateShapes( text, size = 100 ) {
 
 		const shapes = [];
 		const paths = createPaths( text, size, this.data );
@@ -39998,7 +38401,7 @@ Object.assign( Font.prototype, {
 
 	}
 
-} );
+}
 
 function createPaths( text, size, data ) {
 
@@ -40503,9 +38906,7 @@ class Audio extends Object3D {
 
 	}
 
-	play( delay ) {
-
-		if ( delay === undefined ) delay = 0;
+	play( delay = 0 ) {
 
 		if ( this.isPlaying === true ) {
 
@@ -40660,12 +39061,12 @@ class Audio extends Object3D {
 		if ( this._connected === true ) {
 
 			this.disconnect();
-			this.filters = value;
+			this.filters = value.slice();
 			this.connect();
 
 		} else {
 
-			this.filters = value;
+			this.filters = value.slice();
 
 		}
 
@@ -41310,7 +39711,7 @@ Object.assign( PropertyBinding, {
 
 	findNode: function ( root, nodeName ) {
 
-		if ( ! nodeName || nodeName === "" || nodeName === "." || nodeName === - 1 || nodeName === root.name || nodeName === root.uuid ) {
+		if ( ! nodeName || nodeName === '' || nodeName === '.' || nodeName === - 1 || nodeName === root.name || nodeName === root.uuid ) {
 
 			return root;
 
@@ -41713,7 +40114,7 @@ Object.assign( PropertyBinding.prototype, { // prototype, continued
 
 			// access a sub element of the property array (only primitives are supported right now)
 
-			if ( propertyName === "morphTargetInfluences" ) {
+			if ( propertyName === 'morphTargetInfluences' ) {
 
 				// potential optimization, skip this if propertyIndex is already an integer, and convert the integer string to a true integer.
 
@@ -42083,7 +40484,12 @@ Object.assign( AnimationObjectGroup.prototype, {
 					const lastIndex = -- nObjects,
 						lastObject = objects[ lastIndex ];
 
-					indicesByUUID[ lastObject.uuid ] = index;
+					if ( lastIndex > 0 ) {
+
+						indicesByUUID[ lastObject.uuid ] = index;
+
+					}
+
 					objects[ index ] = lastObject;
 					objects.pop();
 
@@ -42183,12 +40589,12 @@ Object.assign( AnimationObjectGroup.prototype, {
 
 class AnimationAction {
 
-	constructor( mixer, clip, localRoot, blendMode ) {
+	constructor( mixer, clip, localRoot = null, blendMode = clip.blendMode ) {
 
 		this._mixer = mixer;
 		this._clip = clip;
-		this._localRoot = localRoot || null;
-		this.blendMode = blendMode || clip.blendMode;
+		this._localRoot = localRoot;
+		this.blendMode = blendMode;
 
 		const tracks = clip.tracks,
 			nTracks = tracks.length,
@@ -43837,13 +42243,13 @@ Object.assign( Raycaster.prototype, {
 
 	setFromCamera: function ( coords, camera ) {
 
-		if ( ( camera && camera.isPerspectiveCamera ) ) {
+		if ( camera && camera.isPerspectiveCamera ) {
 
 			this.ray.origin.setFromMatrixPosition( camera.matrixWorld );
 			this.ray.direction.set( coords.x, coords.y, 0.5 ).unproject( camera ).sub( this.ray.origin ).normalize();
 			this.camera = camera;
 
-		} else if ( ( camera && camera.isOrthographicCamera ) ) {
+		} else if ( camera && camera.isOrthographicCamera ) {
 
 			this.ray.origin.set( coords.x, coords.y, ( camera.near + camera.far ) / ( camera.near - camera.far ) ).unproject( camera ); // set origin in plane of camera
 			this.ray.direction.set( 0, 0, - 1 ).transformDirection( camera.matrixWorld );
@@ -43851,7 +42257,7 @@ Object.assign( Raycaster.prototype, {
 
 		} else {
 
-			console.error( 'THREE.Raycaster: Unsupported camera type.' );
+			console.error( 'THREE.Raycaster: Unsupported camera type: ' + camera.type );
 
 		}
 
@@ -43977,7 +42383,7 @@ class Spherical {
 
 }
 
-const _vector$7 = /*@__PURE__*/ new Vector2();
+const _vector$8 = /*@__PURE__*/ new Vector2();
 
 class Box2 {
 
@@ -44015,7 +42421,7 @@ class Box2 {
 
 	setFromCenterAndSize( center, size ) {
 
-		const halfSize = _vector$7.copy( size ).multiplyScalar( 0.5 );
+		const halfSize = _vector$8.copy( size ).multiplyScalar( 0.5 );
 		this.min.copy( center ).sub( halfSize );
 		this.max.copy( center ).add( halfSize );
 
@@ -44165,7 +42571,7 @@ class Box2 {
 
 	distanceToPoint( point ) {
 
-		const clampedPoint = _vector$7.copy( point ).clamp( this.min, this.max );
+		const clampedPoint = _vector$8.copy( point ).clamp( this.min, this.max );
 		return clampedPoint.sub( point ).length();
 
 	}
@@ -44231,7 +42637,7 @@ ImmediateRenderObject.prototype.constructor = ImmediateRenderObject;
 
 ImmediateRenderObject.prototype.isImmediateRenderObject = true;
 
-const _vector$9 = /*@__PURE__*/ new Vector3();
+const _vector$a = /*@__PURE__*/ new Vector3();
 const _boneMatrix = /*@__PURE__*/ new Matrix4();
 const _matrixWorldInv = /*@__PURE__*/ new Matrix4();
 
@@ -44290,7 +42696,7 @@ class SkeletonHelper extends LineSegments {
 		const geometry = this.geometry;
 		const position = geometry.getAttribute( 'position' );
 
-		_matrixWorldInv.getInverse( this.root.matrixWorld );
+		_matrixWorldInv.copy( this.root.matrixWorld ).invert();
 
 		for ( let i = 0, j = 0; i < bones.length; i ++ ) {
 
@@ -44299,12 +42705,12 @@ class SkeletonHelper extends LineSegments {
 			if ( bone.parent && bone.parent.isBone ) {
 
 				_boneMatrix.multiplyMatrices( _matrixWorldInv, bone.matrixWorld );
-				_vector$9.setFromMatrixPosition( _boneMatrix );
-				position.setXYZ( j, _vector$9.x, _vector$9.y, _vector$9.z );
+				_vector$a.setFromMatrixPosition( _boneMatrix );
+				position.setXYZ( j, _vector$a.x, _vector$a.y, _vector$a.z );
 
 				_boneMatrix.multiplyMatrices( _matrixWorldInv, bone.parent.matrixWorld );
-				_vector$9.setFromMatrixPosition( _boneMatrix );
-				position.setXYZ( j + 1, _vector$9.x, _vector$9.y, _vector$9.z );
+				_vector$a.setFromMatrixPosition( _boneMatrix );
+				position.setXYZ( j + 1, _vector$a.x, _vector$a.y, _vector$a.z );
 
 				j += 2;
 
@@ -44341,6 +42747,64 @@ function getBoneList( object ) {
 
 }
 
+const _floatView = new Float32Array( 1 );
+const _int32View = new Int32Array( _floatView.buffer );
+
+const DataUtils = {
+
+	// Converts float32 to float16 (stored as uint16 value).
+
+	toHalfFloat: function ( val ) {
+
+		// Source: http://gamedev.stackexchange.com/questions/17326/conversion-of-a-number-from-single-precision-floating-point-representation-to-a/17410#17410
+
+		/* This method is faster than the OpenEXR implementation (very often
+		* used, eg. in Ogre), with the additional benefit of rounding, inspired
+		* by James Tursa?s half-precision code. */
+
+		_floatView[ 0 ] = val;
+		const x = _int32View[ 0 ];
+
+		let bits = ( x >> 16 ) & 0x8000; /* Get the sign */
+		let m = ( x >> 12 ) & 0x07ff; /* Keep one extra bit for rounding */
+		const e = ( x >> 23 ) & 0xff; /* Using int is faster here */
+
+		/* If zero, or denormal, or exponent underflows too much for a denormal
+			* half, return signed zero. */
+		if ( e < 103 ) return bits;
+
+		/* If NaN, return NaN. If Inf or exponent overflow, return Inf. */
+		if ( e > 142 ) {
+
+			bits |= 0x7c00;
+			/* If exponent was 0xff and one mantissa bit was set, it means NaN,
+						* not Inf, so make sure we set one mantissa bit too. */
+			bits |= ( ( e == 255 ) ? 0 : 1 ) && ( x & 0x007fffff );
+			return bits;
+
+		}
+
+		/* If exponent underflows but not too much, return a denormal */
+		if ( e < 113 ) {
+
+			m |= 0x0800;
+			/* Extra rounding may overflow and set mantissa to 0 and exponent
+				* to 1, which is OK. */
+			bits |= ( m >> ( 114 - e ) ) + ( ( m >> ( 113 - e ) ) & 1 );
+			return bits;
+
+		}
+
+		bits |= ( ( e - 112 ) << 10 ) | ( m >> 1 );
+		/* Extra rounding. An overflow will set mantissa to 0 and increment
+			* the exponent, which is OK. */
+		bits += m & 1;
+		return bits;
+
+	}
+
+};
+
 const LOD_MIN = 4;
 const LOD_MAX = 8;
 const SIZE_MAX = Math.pow( 2, LOD_MAX );
@@ -44367,8 +42831,16 @@ const ENCODINGS = {
 	[ GammaEncoding ]: 6
 };
 
+const backgroundMaterial = new MeshBasicMaterial( {
+	side: BackSide,
+	depthWrite: false,
+	depthTest: false,
+} );
+const backgroundBox = new Mesh( new BoxGeometry(), backgroundMaterial );
+
 const _flatCamera = /*@__PURE__*/ new OrthographicCamera();
 const { _lodPlanes, _sizeLods, _sigmas } = /*@__PURE__*/ _createPlanes();
+const _clearColor = /*@__PURE__*/ new Color();
 let _oldTarget = null;
 
 // Golden Ratio
@@ -44400,6 +42872,17 @@ const _axisDirections = [
  * higher roughness levels. In this way we maintain resolution to smoothly
  * interpolate diffuse lighting while limiting sampling computation.
  */
+
+function convertLinearToRGBE( color ) {
+
+	const maxComponent = Math.max( color.r, color.g, color.b );
+	const fExp = Math.min( Math.max( Math.ceil( Math.log2( maxComponent ) ), - 128.0 ), 127.0 );
+	color.multiplyScalar( Math.pow( 2.0, - fExp ) );
+
+	const alpha = ( fExp + 128.0 ) / 255.0;
+	return alpha;
+
+}
 
 class PMREMGenerator {
 
@@ -44572,27 +43055,40 @@ class PMREMGenerator {
 		const forwardSign = [ 1, 1, 1, - 1, - 1, - 1 ];
 		const renderer = this._renderer;
 
+		const originalAutoClear = renderer.autoClear;
 		const outputEncoding = renderer.outputEncoding;
 		const toneMapping = renderer.toneMapping;
-		const clearColor = renderer.getClearColor();
-		const clearAlpha = renderer.getClearAlpha();
+		renderer.getClearColor( _clearColor );
 
 		renderer.toneMapping = NoToneMapping;
 		renderer.outputEncoding = LinearEncoding;
+		renderer.autoClear = false;
 
-		let background = scene.background;
-		if ( background && background.isColor ) {
+		let useSolidColor = false;
+		const background = scene.background;
+		if ( background ) {
 
-			background.convertSRGBToLinear();
-			// Convert linear to RGBE
-			const maxComponent = Math.max( background.r, background.g, background.b );
-			const fExp = Math.min( Math.max( Math.ceil( Math.log2( maxComponent ) ), - 128.0 ), 127.0 );
-			background = background.multiplyScalar( Math.pow( 2.0, - fExp ) );
-			const alpha = ( fExp + 128.0 ) / 255.0;
-			renderer.setClearColor( background, alpha );
-			scene.background = null;
+			if ( background.isColor ) {
+
+				backgroundMaterial.color.copy( background ).convertSRGBToLinear();
+				scene.background = null;
+
+				const alpha = convertLinearToRGBE( backgroundMaterial.color );
+				backgroundMaterial.opacity = alpha;
+				useSolidColor = true;
+
+			}
+
+		} else {
+
+			backgroundMaterial.color.copy( _clearColor ).convertSRGBToLinear();
+
+			const alpha = convertLinearToRGBE( backgroundMaterial.color );
+			backgroundMaterial.opacity = alpha;
+			useSolidColor = true;
 
 		}
+
 
 		for ( let i = 0; i < 6; i ++ ) {
 
@@ -44617,13 +43113,20 @@ class PMREMGenerator {
 			_setViewport( cubeUVRenderTarget,
 				col * SIZE_MAX, i > 2 ? SIZE_MAX : 0, SIZE_MAX, SIZE_MAX );
 			renderer.setRenderTarget( cubeUVRenderTarget );
+
+			if ( useSolidColor ) {
+
+				renderer.render( backgroundBox, cubeCamera );
+
+			}
+
 			renderer.render( scene, cubeCamera );
 
 		}
 
 		renderer.toneMapping = toneMapping;
 		renderer.outputEncoding = outputEncoding;
-		renderer.setClearColor( clearColor, clearAlpha );
+		renderer.autoClear = originalAutoClear;
 
 	}
 
@@ -45287,51 +43790,6 @@ Curve.create = function ( construct, getPoint ) {
 
 //
 
-Object.assign( CurvePath.prototype, {
-
-	createPointsGeometry: function ( divisions ) {
-
-		console.warn( 'THREE.CurvePath: .createPointsGeometry() has been removed. Use new THREE.Geometry().setFromPoints( points ) instead.' );
-
-		// generate geometry from path points (for Line or Points objects)
-
-		const pts = this.getPoints( divisions );
-		return this.createGeometry( pts );
-
-	},
-
-	createSpacedPointsGeometry: function ( divisions ) {
-
-		console.warn( 'THREE.CurvePath: .createSpacedPointsGeometry() has been removed. Use new THREE.Geometry().setFromPoints( points ) instead.' );
-
-		// generate geometry from equidistant sampling along the path
-
-		const pts = this.getSpacedPoints( divisions );
-		return this.createGeometry( pts );
-
-	},
-
-	createGeometry: function ( points ) {
-
-		console.warn( 'THREE.CurvePath: .createGeometry() has been removed. Use new THREE.Geometry().setFromPoints( points ) instead.' );
-
-		const geometry = new Geometry();
-
-		for ( let i = 0, l = points.length; i < l; i ++ ) {
-
-			const point = points[ i ];
-			geometry.vertices.push( new Vector3( point.x, point.y, point.z || 0 ) );
-
-		}
-
-		return geometry;
-
-	}
-
-} );
-
-//
-
 Object.assign( Path.prototype, {
 
 	fromPoints: function ( points ) {
@@ -45522,7 +43980,7 @@ Object.assign( Matrix3.prototype, {
 
 	flattenToArrayOffset: function ( array, offset ) {
 
-		console.warn( "THREE.Matrix3: .flattenToArrayOffset() has been deprecated. Use .toArray() instead." );
+		console.warn( 'THREE.Matrix3: .flattenToArrayOffset() has been deprecated. Use .toArray() instead.' );
 		return this.toArray( array, offset );
 
 	},
@@ -45547,6 +44005,12 @@ Object.assign( Matrix3.prototype, {
 
 		console.error( 'THREE.Matrix3: .applyToVector3Array() has been removed.' );
 
+	},
+	getInverse: function ( matrix ) {
+
+		console.warn( 'THREE.Matrix3: .getInverse() has been removed. Use matrixInv.copy( matrix ).invert(); instead.' );
+		return this.copy( matrix ).invert();
+
 	}
 
 } );
@@ -45561,7 +44025,7 @@ Object.assign( Matrix4.prototype, {
 	},
 	flattenToArrayOffset: function ( array, offset ) {
 
-		console.warn( "THREE.Matrix4: .flattenToArrayOffset() has been deprecated. Use .toArray() instead." );
+		console.warn( 'THREE.Matrix4: .flattenToArrayOffset() has been deprecated. Use .toArray() instead.' );
 		return this.toArray( array, offset );
 
 	},
@@ -45652,6 +44116,12 @@ Object.assign( Matrix4.prototype, {
 		console.warn( 'THREE.Matrix4: .makeFrustum() has been removed. Use .makePerspective( left, right, top, bottom, near, far ) instead.' );
 		return this.makePerspective( left, right, top, bottom, near, far );
 
+	},
+	getInverse: function ( matrix ) {
+
+		console.warn( 'THREE.Matrix4: .getInverse() has been removed. Use matrixInv.copy( matrix ).invert(); instead.' );
+		return this.copy( matrix ).invert();
+
 	}
 
 } );
@@ -45663,12 +44133,22 @@ Plane.prototype.isIntersectionLine = function ( line ) {
 
 };
 
-Quaternion.prototype.multiplyVector3 = function ( vector ) {
+Object.assign( Quaternion.prototype, {
 
-	console.warn( 'THREE.Quaternion: .multiplyVector3() has been removed. Use is now vector.applyQuaternion( quaternion ) instead.' );
-	return vector.applyQuaternion( this );
+	multiplyVector3: function ( vector ) {
 
-};
+		console.warn( 'THREE.Quaternion: .multiplyVector3() has been removed. Use is now vector.applyQuaternion( quaternion ) instead.' );
+		return vector.applyQuaternion( this );
+
+	},
+	inverse: function ( ) {
+
+		console.warn( 'THREE.Quaternion: .inverse() has been renamed to invert().' );
+		return this.invert();
+
+	}
+
+} );
 
 Object.assign( Ray.prototype, {
 
@@ -45867,27 +44347,6 @@ Object.assign( Vector4.prototype, {
 
 //
 
-Object.assign( Geometry.prototype, {
-
-	computeTangents: function () {
-
-		console.error( 'THREE.Geometry: .computeTangents() has been removed.' );
-
-	},
-	computeLineDistances: function () {
-
-		console.error( 'THREE.Geometry: .computeLineDistances() has been removed. Use THREE.Line.computeLineDistances() instead.' );
-
-	},
-	applyMatrix: function ( matrix ) {
-
-		console.warn( 'THREE.Geometry: .applyMatrix() has been renamed to .applyMatrix4().' );
-		return this.applyMatrix4( matrix );
-
-	}
-
-} );
-
 Object.assign( Object3D.prototype, {
 
 	getChildByName: function ( name ) {
@@ -46035,8 +44494,8 @@ Object.defineProperty( Curve.prototype, '__arcLengthDivisions', {
 
 PerspectiveCamera.prototype.setLens = function ( focalLength, filmGauge ) {
 
-	console.warn( "THREE.PerspectiveCamera.setLens is deprecated. " +
-			"Use .setFocalLength and .filmGauge for a photographic setup." );
+	console.warn( 'THREE.PerspectiveCamera.setLens is deprecated. ' +
+			'Use .setFocalLength and .filmGauge for a photographic setup.' );
 
 	if ( filmGauge !== undefined ) this.filmGauge = filmGauge;
 	this.setFocalLength( focalLength );
@@ -46248,11 +44707,6 @@ Object.assign( BufferGeometry.prototype, {
 		this.clearGroups();
 
 	},
-	computeTangents: function () {
-
-		console.warn( 'THREE.BufferGeometry: .computeTangents() has been removed.' );
-
-	},
 	computeOffsets: function () {
 
 		console.warn( 'THREE.BufferGeometry: .computeOffsets() has been removed.' );
@@ -46369,23 +44823,23 @@ Object.assign( InterleavedBuffer.prototype, {
 
 //
 
-Object.assign( ExtrudeBufferGeometry.prototype, {
+Object.assign( ExtrudeGeometry.prototype, {
 
 	getArrays: function () {
 
-		console.error( 'THREE.ExtrudeBufferGeometry: .getArrays() has been removed.' );
+		console.error( 'THREE.ExtrudeGeometry: .getArrays() has been removed.' );
 
 	},
 
 	addShapeList: function () {
 
-		console.error( 'THREE.ExtrudeBufferGeometry: .addShapeList() has been removed.' );
+		console.error( 'THREE.ExtrudeGeometry: .addShapeList() has been removed.' );
 
 	},
 
 	addShape: function () {
 
-		console.error( 'THREE.ExtrudeBufferGeometry: .addShape() has been removed.' );
+		console.error( 'THREE.ExtrudeGeometry: .addShape() has been removed.' );
 
 	}
 
@@ -47029,6 +45483,13 @@ CubeCamera.prototype.updateCubeMap = function ( renderer, scene ) {
 
 };
 
+CubeCamera.prototype.clear = function ( renderer, color, depth, stencil ) {
+
+	console.warn( 'THREE.CubeCamera: .clear() is now .renderTarget.clear().' );
+	return this.renderTarget.clear( renderer, color, depth, stencil );
+
+};
+
 ImageUtils.crossOrigin = undefined;
 
 ImageUtils.loadTexture = function ( url, mapping, onLoad, onError ) {
@@ -47080,6 +45541,20 @@ if ( typeof __THREE_DEVTOOLS__ !== 'undefined' ) {
 		revision: REVISION,
 	} } ) );
 	/* eslint-enable no-undef */
+
+}
+
+if ( typeof window !== 'undefined' ) {
+
+	if ( window.__THREE__ ) {
+
+		console.warn( 'WARNING: Multiple instances of Three.js being imported.' );
+
+	} else {
+
+		window.__THREE__ = REVISION;
+
+	}
 
 }
 
@@ -47665,7 +46140,7 @@ DRACOLoader.DRACOWorker = function () {
 
 	}
 
-	function getDracoDataType ( draco, attributeType ) {
+	function getDracoDataType( draco, attributeType ) {
 
 		switch ( attributeType ) {
 
@@ -47724,6 +46199,7 @@ var GLTFLoader = ( function () {
 		this.dracoLoader = null;
 		this.ddsLoader = null;
 		this.ktx2Loader = null;
+		this.meshoptDecoder = null;
 
 		this.pluginCallbacks = [];
 
@@ -47741,6 +46217,12 @@ var GLTFLoader = ( function () {
 
 		this.register( function ( parser ) {
 
+			return new GLTFTextureWebPExtension( parser );
+
+		} );
+
+		this.register( function ( parser ) {
+
 			return new GLTFMaterialsTransmissionExtension( parser );
 
 		} );
@@ -47748,6 +46230,12 @@ var GLTFLoader = ( function () {
 		this.register( function ( parser ) {
 
 			return new GLTFLightsExtension( parser );
+
+		} );
+
+		this.register( function ( parser ) {
+
+			return new GLTFMeshoptCompression( parser );
 
 		} );
 
@@ -47849,6 +46337,13 @@ var GLTFLoader = ( function () {
 
 		},
 
+		setMeshoptDecoder: function ( meshoptDecoder ) {
+
+			this.meshoptDecoder = meshoptDecoder;
+			return this;
+
+		},
+
 		register: function ( callback ) {
 
 			if ( this.pluginCallbacks.indexOf( callback ) === - 1 ) {
@@ -47924,7 +46419,8 @@ var GLTFLoader = ( function () {
 				path: path || this.resourcePath || '',
 				crossOrigin: this.crossOrigin,
 				manager: this.manager,
-				ktx2Loader: this.ktx2Loader
+				ktx2Loader: this.ktx2Loader,
+				meshoptDecoder: this.meshoptDecoder
 
 			} );
 
@@ -48049,6 +46545,8 @@ var GLTFLoader = ( function () {
 		KHR_TEXTURE_BASISU: 'KHR_texture_basisu',
 		KHR_TEXTURE_TRANSFORM: 'KHR_texture_transform',
 		KHR_MESH_QUANTIZATION: 'KHR_mesh_quantization',
+		EXT_TEXTURE_WEBP: 'EXT_texture_webp',
+		EXT_MESHOPT_COMPRESSION: 'EXT_meshopt_compression',
 		MSFT_TEXTURE_DDS: 'MSFT_texture_dds'
 	};
 
@@ -48154,7 +46652,7 @@ var GLTFLoader = ( function () {
 				break;
 
 			default:
-				throw new Error( 'THREE.GLTFLoader: Unexpected light type, "' + lightDef.type + '".' );
+				throw new Error( 'THREE.GLTFLoader: Unexpected light type: ' + lightDef.type );
 
 		}
 
@@ -48314,7 +46812,8 @@ var GLTFLoader = ( function () {
 
 				var scale = extension.clearcoatNormalTexture.scale;
 
-				materialParams.clearcoatNormalScale = new Vector2( scale, scale );
+				// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
+				materialParams.clearcoatNormalScale = new Vector2( scale, -scale );
 
 			}
 
@@ -48383,7 +46882,6 @@ var GLTFLoader = ( function () {
 	 * BasisU Texture Extension
 	 *
 	 * Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_texture_basisu
-	 * (draft PR https://github.com/KhronosGroup/glTF/pull/1751)
 	 */
 	function GLTFTextureBasisUExtension( parser ) {
 
@@ -48411,11 +46909,157 @@ var GLTFLoader = ( function () {
 
 		if ( ! loader ) {
 
-			throw new Error( 'THREE.GLTFLoader: setKTX2Loader must be called before loading KTX2 textures' );
+			if ( json.extensionsRequired && json.extensionsRequired.indexOf( this.name ) >= 0 ) {
+
+				throw new Error( 'THREE.GLTFLoader: setKTX2Loader must be called before loading KTX2 textures' );
+
+			} else {
+
+				// Assumes that the extension is optional and that a fallback texture is present
+				return null;
+
+			}
 
 		}
 
 		return parser.loadTextureImage( textureIndex, source, loader );
+
+	};
+
+	/**
+	 * WebP Texture Extension
+	 *
+	 * Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_texture_webp
+	 */
+	function GLTFTextureWebPExtension( parser ) {
+
+		this.parser = parser;
+		this.name = EXTENSIONS.EXT_TEXTURE_WEBP;
+		this.isSupported = null;
+
+	}
+
+	GLTFTextureWebPExtension.prototype.loadTexture = function ( textureIndex ) {
+
+		var name = this.name;
+		var parser = this.parser;
+		var json = parser.json;
+
+		var textureDef = json.textures[ textureIndex ];
+
+		if ( ! textureDef.extensions || ! textureDef.extensions[ name ] ) {
+
+			return null;
+
+		}
+
+		var extension = textureDef.extensions[ name ];
+		var source = json.images[ extension.source ];
+		var loader = source.uri ? parser.options.manager.getHandler( source.uri ) : parser.textureLoader;
+
+		return this.detectSupport().then( function ( isSupported ) {
+
+			if ( isSupported ) return parser.loadTextureImage( textureIndex, source, loader );
+
+			if ( json.extensionsRequired && json.extensionsRequired.indexOf( name ) >= 0 ) {
+
+				throw new Error( 'THREE.GLTFLoader: WebP required by asset but unsupported.' );
+
+			}
+
+			// Fall back to PNG or JPEG.
+			return parser.loadTexture( textureIndex );
+
+		} );
+
+	};
+
+	GLTFTextureWebPExtension.prototype.detectSupport = function () {
+
+		if ( ! this.isSupported ) {
+
+			this.isSupported = new Promise( function ( resolve ) {
+
+				var image = new Image();
+
+				// Lossy test image. Support for lossy images doesn't guarantee support for all
+				// WebP images, unfortunately.
+				image.src = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+
+				image.onload = image.onerror = function () {
+
+					resolve( image.height === 1 );
+
+				};
+
+			} );
+
+		}
+
+		return this.isSupported;
+
+	};
+
+	/**
+	* meshopt BufferView Compression Extension
+	*
+	* Specification: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/EXT_meshopt_compression
+	*/
+	function GLTFMeshoptCompression( parser ) {
+
+		this.name = EXTENSIONS.EXT_MESHOPT_COMPRESSION;
+		this.parser = parser;
+
+	}
+
+	GLTFMeshoptCompression.prototype.loadBufferView = function ( index ) {
+
+		var json = this.parser.json;
+		var bufferView = json.bufferViews[ index ];
+
+		if ( bufferView.extensions && bufferView.extensions[ this.name ] ) {
+
+			var extensionDef = bufferView.extensions[ this.name ];
+
+			var buffer = this.parser.getDependency( 'buffer', extensionDef.buffer );
+			var decoder = this.parser.options.meshoptDecoder;
+
+			if ( ! decoder || ! decoder.supported ) {
+
+				if ( json.extensionsRequired && json.extensionsRequired.indexOf( this.name ) >= 0 ) {
+
+					throw new Error( 'THREE.GLTFLoader: setMeshoptDecoder must be called before loading compressed files' );
+
+				} else {
+
+					// Assumes that the extension is optional and that fallback buffer data is present
+					return null;
+
+				}
+
+			}
+
+			return Promise.all( [ buffer, decoder.ready ] ).then( function ( res ) {
+
+				var byteOffset = extensionDef.byteOffset || 0;
+				var byteLength = extensionDef.byteLength || 0;
+
+				var count = extensionDef.count;
+				var stride = extensionDef.byteStride;
+
+				var result = new ArrayBuffer( count * stride );
+				var source = new Uint8Array( res[ 0 ], byteOffset, byteLength );
+
+				decoder.decodeGltfBuffer( new Uint8Array( result ), count, stride, source, extensionDef.mode, extensionDef.filter );
+				return result;
+
+			} );
+
+		} else {
+
+			return null;
+
+		}
 
 	};
 
@@ -48448,10 +47092,11 @@ var GLTFLoader = ( function () {
 
 		}
 
+		var chunkContentsLength = this.header.length - BINARY_EXTENSION_HEADER_LENGTH;
 		var chunkView = new DataView( data, BINARY_EXTENSION_HEADER_LENGTH );
 		var chunkIndex = 0;
 
-		while ( chunkIndex < chunkView.byteLength ) {
+		while ( chunkIndex < chunkContentsLength ) {
 
 			var chunkLength = chunkView.getUint32( chunkIndex, true );
 			chunkIndex += 4;
@@ -50169,11 +48814,20 @@ var GLTFLoader = ( function () {
 				cachedMaterial = material.clone();
 
 				if ( useSkinning ) cachedMaterial.skinning = true;
-				if ( useVertexTangents ) cachedMaterial.vertexTangents = true;
 				if ( useVertexColors ) cachedMaterial.vertexColors = true;
 				if ( useFlatShading ) cachedMaterial.flatShading = true;
 				if ( useMorphTargets ) cachedMaterial.morphTargets = true;
 				if ( useMorphNormals ) cachedMaterial.morphNormals = true;
+
+				if ( useVertexTangents ) {
+
+					cachedMaterial.vertexTangents = true;
+
+					// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
+					if ( cachedMaterial.normalScale ) cachedMaterial.normalScale.y *= -1;
+					if ( cachedMaterial.clearcoatNormalScale ) cachedMaterial.clearcoatNormalScale.y *= -1;
+
+				}
 
 				this.cache.add( cacheKey, cachedMaterial );
 
@@ -50190,19 +48844,6 @@ var GLTFLoader = ( function () {
 		if ( material.aoMap && geometry.attributes.uv2 === undefined && geometry.attributes.uv !== undefined ) {
 
 			geometry.setAttribute( 'uv2', geometry.attributes.uv );
-
-		}
-
-		// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
-		if ( material.normalScale && ! useVertexTangents ) {
-
-			material.normalScale.y = - material.normalScale.y;
-
-		}
-
-		if ( material.clearcoatNormalScale && ! useVertexTangents ) {
-
-			material.clearcoatNormalScale.y = - material.clearcoatNormalScale.y;
 
 		}
 
@@ -50326,11 +48967,12 @@ var GLTFLoader = ( function () {
 
 			pending.push( parser.assignTexture( materialParams, 'normalMap', materialDef.normalTexture ) );
 
-			materialParams.normalScale = new Vector2( 1, 1 );
+			// https://github.com/mrdoob/three.js/issues/11438#issuecomment-507003995
+			materialParams.normalScale = new Vector2( 1, -1 );
 
 			if ( materialDef.normalTexture.scale !== undefined ) {
 
-				materialParams.normalScale.set( materialDef.normalTexture.scale, materialDef.normalTexture.scale );
+				materialParams.normalScale.set( materialDef.normalTexture.scale, -materialDef.normalTexture.scale );
 
 			}
 
@@ -50395,11 +49037,13 @@ var GLTFLoader = ( function () {
 	/** When Object3D instances are targeted by animation, they need unique names. */
 	GLTFParser.prototype.createUniqueName = function ( originalName ) {
 
-		var name = PropertyBinding.sanitizeNodeName( originalName || '' );
+		var sanitizedName = PropertyBinding.sanitizeNodeName( originalName || '' );
+
+		var name = sanitizedName;
 
 		for ( var i = 1; this.nodeNamesUsed[ name ]; ++ i ) {
 
-			name = originalName + '_' + i;
+			name = sanitizedName + '_' + i;
 
 		}
 
@@ -50740,6 +49384,7 @@ var GLTFLoader = ( function () {
 
 		var parser = this;
 		var json = this.json;
+		var extensions = this.extensions;
 
 		var meshDef = json.meshes[ meshIndex ];
 		var primitives = meshDef.primitives;
@@ -50785,6 +49430,21 @@ var GLTFLoader = ( function () {
 					mesh = meshDef.isSkinnedMesh === true
 						? new SkinnedMesh( geometry, material )
 						: new Mesh( geometry, material );
+
+					// Fix double sided rendered models on certain mobile devices, see https://github.com/mrdoob/three.js/issues/20997#issuecomment-756082184
+
+					if ( material.isMeshStandardMaterial === true &&
+						material.side === DoubleSide &&
+						geometry.getIndex() !== null &&
+						geometry.hasAttribute( 'position' ) === true &&
+						geometry.hasAttribute( 'normal' ) === true &&
+						geometry.hasAttribute( 'uv' ) === true &&
+						geometry.hasAttribute( 'tangent' ) === false ) {
+
+						geometry.computeTangents();
+						material.vertexTangents = true;
+
+					}
 
 					if ( mesh.isSkinnedMesh === true && ! mesh.geometry.attributes.skinWeight.normalized ) {
 
@@ -50834,9 +49494,9 @@ var GLTFLoader = ( function () {
 
 				mesh.name = parser.createUniqueName( meshDef.name || ( 'mesh_' + meshIndex ) );
 
-				if ( geometries.length > 1 ) mesh.name += '_' + i;
-
 				assignExtrasToUserData( mesh, meshDef );
+
+				if ( primitive.extensions ) addUnknownExtensionsToUserData( extensions, mesh, primitive );
 
 				parser.assignFinalMaterial( mesh );
 
@@ -52346,6 +51006,7 @@ class Hotspot extends CSS2DObject {
         for (let i = 0; i < 3; ++i) {
             this.position.setComponent(i, normalizeUnit(positionNodes[i]).number);
         }
+        this.updateMatrixWorld();
     }
     /**
      * Change the hotspot's normal to the input string, in the same format as the
@@ -52420,29 +51081,29 @@ class Hotspot extends CSS2DObject {
  *
  * Adapted from Three.js, @see https://github.com/mrdoob/three.js/blob/7e0a78beb9317e580d7fa4da9b5b12be051c6feb/src/math/Box3.js#L241
  */
-const reduceVertices = (model, func) => {
-    let value = 0;
-    const vector = new Vector3();
+const reduceVertices = (model, func, initialValue) => {
+    let value = initialValue;
+    const vertex = new Vector3();
     model.traverse((object) => {
         let i, l;
         object.updateWorldMatrix(false, false);
-        let geometry = object.geometry;
+        const geometry = object.geometry;
         if (geometry !== undefined) {
             if (geometry.isGeometry) {
-                let vertices = geometry.vertices;
+                const vertices = geometry.vertices;
                 for (i = 0, l = vertices.length; i < l; i++) {
-                    vector.copy(vertices[i]);
-                    vector.applyMatrix4(object.matrixWorld);
-                    value = func(value, vector);
+                    vertex.copy(vertices[i]);
+                    vertex.applyMatrix4(object.matrixWorld);
+                    value = func(value, vertex);
                 }
             }
             else if (geometry.isBufferGeometry) {
-                let attribute = geometry.attributes.position;
-                if (attribute !== undefined) {
-                    for (i = 0, l = attribute.count; i < l; i++) {
-                        vector.fromBufferAttribute(attribute, i)
+                const { position } = geometry.attributes;
+                if (position !== undefined) {
+                    for (i = 0, l = position.count; i < l; i++) {
+                        vertex.fromBufferAttribute(position, i)
                             .applyMatrix4(object.matrixWorld);
-                        value = func(value, vector);
+                        value = func(value, vertex);
                     }
                 }
             }
@@ -52465,9 +51126,9 @@ const reduceVertices = (model, func) => {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// Nothing within Offset of the bottom of the model casts a shadow
+// Nothing within Offset of the bottom of the scene casts a shadow
 // (this is to avoid having a baked-in shadow plane cast its own shadow).
-const OFFSET = 0.001;
+const OFFSET = 0.002;
 // The softness [0, 1] of the shadow is mapped to a resolution between
 // 2^LOG_MAX_RESOLUTION and 2^LOG_MIN_RESOLUTION.
 const LOG_MAX_RESOLUTION = 9;
@@ -52478,12 +51139,12 @@ const LOG_MIN_RESOLUTION = 6;
 // by this scale factor.
 const ANIMATION_SCALING = 2;
 /**
- * The Shadow class creates a shadow that fits a given model and follows a
- * target. This shadow will follow the model without any updates needed so long
- * as the shadow and model are both parented to the same object (call it the
+ * The Shadow class creates a shadow that fits a given scene and follows a
+ * target. This shadow will follow the scene without any updates needed so long
+ * as the shadow and scene are both parented to the same object (call it the
  * scene) and this scene is passed as the target parameter to the shadow's
  * constructor. We also must constrain the scene to motion within the horizontal
- * plane and call the setRotation() method whenever the model's Y-axis rotation
+ * plane and call the setRotation() method whenever the scene's Y-axis rotation
  * changes. For motion outside of the horizontal plane, this.needsUpdate must be
  * set to true.
  *
@@ -52491,36 +51152,45 @@ const ANIMATION_SCALING = 2;
  * softer shadows faster, but less precise.
  */
 class Shadow extends DirectionalLight {
-    constructor(model, softness) {
+    constructor(scene, softness, side) {
         super();
         this.shadowMaterial = new ShadowMaterial;
         this.boundingBox = new Box3;
         this.size = new Vector3;
         this.isAnimated = false;
+        this.side = 'bottom';
         this.needsUpdate = false;
         // We use the light only to cast a shadow, not to light the scene.
         this.intensity = 0;
         this.castShadow = true;
         this.frustumCulled = false;
-        this.floor = new Mesh(new PlaneBufferGeometry, this.shadowMaterial);
+        this.floor = new Mesh(new PlaneGeometry, this.shadowMaterial);
         this.floor.rotateX(-Math.PI / 2);
         this.floor.receiveShadow = true;
         this.floor.castShadow = false;
         this.floor.frustumCulled = false;
         this.add(this.floor);
-        this.shadow.camera.up.set(0, 0, 1);
-        model.add(this);
-        this.target = model;
-        this.setModel(model, softness);
+        scene.target.add(this);
+        this.target = scene.target;
+        this.setScene(scene, softness, side);
     }
     /**
-     * Update the shadow's size and position for a new model. Softness is also
+     * Update the shadow's size and position for a new scene. Softness is also
      * needed, as this controls the shadow's resolution.
      */
-    setModel(model, softness) {
-        this.isAnimated = model.animationNames.length > 0;
-        this.boundingBox.copy(model.boundingBox);
-        this.size.copy(model.size);
+    setScene(scene, softness, side) {
+        this.side = side;
+        this.isAnimated = scene.animationNames.length > 0;
+        this.boundingBox.copy(scene.boundingBox);
+        this.size.copy(scene.size);
+        if (this.side === 'back') {
+            const { min, max } = this.boundingBox;
+            [min.y, min.z] = [min.z, min.y];
+            [max.y, max.z] = [max.z, max.y];
+            [this.size.y, this.size.z] = [this.size.z, this.size.y];
+            this.rotation.x = Math.PI / 2;
+            this.rotation.y = Math.PI;
+        }
         const { boundingBox, size } = this;
         if (this.isAnimated) {
             const maxDimension = Math.max(size.x, size.y, size.z) * ANIMATION_SCALING;
@@ -52529,9 +51199,17 @@ class Shadow extends DirectionalLight {
             boundingBox.max.y = boundingBox.min.y + maxDimension;
             size.set(maxDimension, maxDimension, maxDimension);
         }
-        const shadowOffset = size.y * OFFSET;
-        this.position.y = boundingBox.max.y + shadowOffset;
         boundingBox.getCenter(this.floor.position);
+        const shadowOffset = boundingBox.max.y + size.y * OFFSET;
+        if (side === 'bottom') {
+            this.position.y = shadowOffset;
+            this.shadow.camera.up.set(0, 0, 1);
+        }
+        else {
+            this.position.y = 0;
+            this.position.z = shadowOffset;
+            this.shadow.camera.up.set(0, 1, 0);
+        }
         this.setSoftness(softness);
     }
     /**
@@ -52595,13 +51273,18 @@ class Shadow extends DirectionalLight {
      * absolute orientation about the Y-axis (other rotations are not supported).
      */
     setRotation(radiansY) {
+        if (this.side !== 'bottom') {
+            // We don't support rotation about a horizontal axis yet.
+            this.shadow.updateMatrices(this);
+            return;
+        }
         this.shadow.camera.up.set(Math.sin(radiansY), 0, Math.cos(radiansY));
         this.shadow.updateMatrices(this);
     }
     /**
      * The scale is also not inherited from parents, so it must be set here in
      * accordance with any transforms. An offset can also be specified to move the
-     * shadow vertically relative to the bottom of the model. Positive is up, so
+     * shadow vertically relative to the bottom of the scene. Positive is up, so
      * values are generally negative.
      */
     setScaleAndOffset(scale, offset) {
@@ -52616,7 +51299,7 @@ class Shadow extends DirectionalLight {
         camera.near = 0;
         camera.far = sizeY * scale - offset;
         camera.projectionMatrix.makeOrthographic(camera.left * scale, camera.right * scale, camera.top * scale, camera.bottom * scale, camera.near, camera.far);
-        camera.projectionMatrixInverse.getInverse(camera.projectionMatrix);
+        camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
     }
 }
 
@@ -52634,65 +51317,94 @@ class Shadow extends DirectionalLight {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$4, _b$2;
 const DEFAULT_FOV_DEG = 45;
 const DEFAULT_HALF_FOV = (DEFAULT_FOV_DEG / 2) * Math.PI / 180;
 const SAFE_RADIUS_RATIO = Math.sin(DEFAULT_HALF_FOV);
 const DEFAULT_TAN_FOV = Math.tan(DEFAULT_HALF_FOV);
-const $shadow = Symbol('shadow');
-const $cancelPendingSourceChange = Symbol('cancelPendingSourceChange');
-const $currentGLTF = Symbol('currentGLTF');
 const view = new Vector3();
 const target = new Vector3();
 const normalWorld = new Vector3();
+const raycaster = new Raycaster();
+const vector3 = new Vector3();
 /**
- * An Object3D that can swap out its underlying model.
+ * A THREE.Scene object that takes a Model and CanvasHTMLElement and
+ * constructs a framed scene based off of the canvas dimensions.
+ * Provides lights and cameras to be used in a renderer.
  */
-class Model extends Object3D {
-    /**
-     * Creates a model.
-     */
-    constructor() {
+class ModelScene extends Scene {
+    constructor({ canvas, element, width, height }) {
         super();
-        this[_a$4] = null;
-        this[_b$2] = null;
-        this.animationsByName = new Map();
-        this.currentAnimationAction = null;
-        this.animations = [];
+        this.context = null;
+        this.width = 1;
+        this.height = 1;
+        this.aspect = 1;
+        this.isDirty = false;
+        this.renderCount = 0;
+        // These default camera values are never used, as they are reset once the
+        // model is loaded and framing is computed.
+        this.camera = new PerspectiveCamera(45, 1, 0.1, 100);
+        this.url = null;
+        this.target = new Object3D();
         this.modelContainer = new Object3D();
         this.animationNames = [];
         this.boundingBox = new Box3();
         this.size = new Vector3();
         this.idealCameraDistance = 0;
         this.fieldOfViewAspect = 0;
-        this.userData = { url: null };
-        this.url = null;
-        this.name = 'Model';
+        this.framedFieldOfView = DEFAULT_FOV_DEG;
+        this.shadow = null;
+        this.shadowIntensity = 0;
+        this.shadowSoftness = 1;
+        this.exposure = 1;
+        this.canScale = true;
+        this.tightBounds = false;
+        this.goalTarget = new Vector3();
+        this.targetDamperX = new Damper();
+        this.targetDamperY = new Damper();
+        this.targetDamperZ = new Damper();
+        this._currentGLTF = null;
+        this.cancelPendingSourceChange = null;
+        this.animationsByName = new Map();
+        this.currentAnimationAction = null;
+        this.name = 'ModelScene';
+        this.element = element;
+        this.canvas = canvas;
+        // These default camera values are never used, as they are reset once the
+        // model is loaded and framing is computed.
+        this.camera = new PerspectiveCamera(45, 1, 0.1, 100);
+        this.camera.name = 'MainCamera';
+        this.activeCamera = this.camera;
+        this.add(this.target);
+        this.setSize(width, height);
+        this.target.name = 'Target';
         this.modelContainer.name = 'ModelContainer';
-        this.add(this.modelContainer);
+        this.target.add(this.modelContainer);
         this.mixer = new AnimationMixer(this.modelContainer);
     }
-    get currentGLTF() {
-        return this[$currentGLTF];
-    }
     /**
-     * Returns a boolean indicating whether or not there is a
-     * loaded model attached.
+     * Function to create the context lazily, as when there is only one
+     * <model-viewer> element, the renderer's 3D context can be displayed
+     * directly. This extra context is necessary to copy the renderings into when
+     * there are more than one.
      */
-    hasModel() {
-        return !!this.modelContainer.children.length;
+    createContext() {
+        {
+            this.context = this.canvas.getContext('2d');
+        }
     }
     /**
      * Pass in a THREE.Object3D to be controlled
      * by this model.
      */
-    setObject(model) {
-        this.clear();
+    async setObject(model) {
+        this.reset();
         this.modelContainer.add(model);
-        this.updateFraming();
-        this.dispatchEvent({ type: 'model-load' });
+        await this.setupScene();
     }
-    async setSource(element, url, progressCallback) {
+    /**
+     * Sets the model via URL.
+     */
+    async setSource(url, progressCallback) {
         if (!url || url === this.url) {
             if (progressCallback) {
                 progressCallback(1);
@@ -52701,17 +51413,16 @@ class Model extends Object3D {
         }
         // If we have pending work due to a previous source change in progress,
         // cancel it so that we do not incur a race condition:
-        if (this[$cancelPendingSourceChange] != null) {
-            this[$cancelPendingSourceChange]();
-            this[$cancelPendingSourceChange] = null;
+        if (this.cancelPendingSourceChange != null) {
+            this.cancelPendingSourceChange();
+            this.cancelPendingSourceChange = null;
         }
-        this.url = url;
         let gltf;
         try {
             gltf = await new Promise(async (resolve, reject) => {
-                this[$cancelPendingSourceChange] = () => reject();
+                this.cancelPendingSourceChange = () => reject();
                 try {
-                    const result = await element[$renderer].loader.load(url, element, progressCallback);
+                    const result = await this.element[$renderer].loader.load(url, this.element, progressCallback);
                     resolve(result);
                 }
                 catch (error) {
@@ -52726,8 +51437,9 @@ class Model extends Object3D {
             }
             throw error;
         }
-        this.clear();
-        this[$currentGLTF] = gltf;
+        this.reset();
+        this.url = url;
+        this._currentGLTF = gltf;
         if (gltf != null) {
             this.modelContainer.add(gltf.scene);
         }
@@ -52741,9 +51453,178 @@ class Model extends Object3D {
         this.animations = animations;
         this.animationsByName = animationsByName;
         this.animationNames = animationNames;
-        this.userData.url = url;
-        this.updateFraming();
-        this.dispatchEvent({ type: 'model-load', url });
+        await this.setupScene();
+    }
+    async setupScene() {
+        this.updateBoundingBox();
+        let target = null;
+        if (this.tightBounds === true) {
+            await this.element.requestUpdate('cameraTarget');
+            target = this.getTarget();
+        }
+        this.updateFraming(target);
+        this.frameModel();
+        this.setShadowIntensity(this.shadowIntensity);
+        this.isDirty = true;
+        this.dispatchEvent({ type: 'model-load', url: this.url });
+    }
+    reset() {
+        this.url = null;
+        const gltf = this._currentGLTF;
+        // Remove all current children
+        if (gltf != null) {
+            for (const child of this.modelContainer.children) {
+                this.modelContainer.remove(child);
+            }
+            gltf.dispose();
+            this._currentGLTF = null;
+        }
+        if (this.currentAnimationAction != null) {
+            this.currentAnimationAction.stop();
+            this.currentAnimationAction = null;
+        }
+        this.mixer.stopAllAction();
+        this.mixer.uncacheRoot(this);
+    }
+    get currentGLTF() {
+        return this._currentGLTF;
+    }
+    /**
+     * Updates the ModelScene for a new container size in CSS pixels.
+     */
+    setSize(width, height) {
+        if (this.width === width && this.height === height) {
+            return;
+        }
+        this.width = Math.max(width, 1);
+        this.height = Math.max(height, 1);
+        this.aspect = this.width / this.height;
+        this.frameModel();
+        this.isDirty = true;
+    }
+    updateBoundingBox() {
+        this.target.remove(this.modelContainer);
+        if (this.tightBounds === true) {
+            const bound = (box, vertex) => {
+                return box.expandByPoint(vertex);
+            };
+            this.boundingBox = reduceVertices(this.modelContainer, bound, new Box3());
+        }
+        else {
+            this.boundingBox.setFromObject(this.modelContainer);
+        }
+        this.boundingBox.getSize(this.size);
+        this.target.add(this.modelContainer);
+    }
+    /**
+     * Calculates the idealCameraDistance and fieldOfViewAspect that allows the 3D
+     * object to be framed tightly in a 2D window of any aspect ratio without
+     * clipping at any camera orbit. The camera's center target point can be
+     * optionally specified. If no center is specified, it defaults to the center
+     * of the bounding box, which means asymmetric models will tend to be tight on
+     * one side instead of both. Proper choice of center can correct this.
+     */
+    updateFraming(center = null) {
+        this.target.remove(this.modelContainer);
+        if (center == null) {
+            center = this.boundingBox.getCenter(new Vector3);
+        }
+        const radiusSquared = (value, vertex) => {
+            return Math.max(value, center.distanceToSquared(vertex));
+        };
+        const framedRadius = Math.sqrt(reduceVertices(this.modelContainer, radiusSquared, 0));
+        this.idealCameraDistance = framedRadius / SAFE_RADIUS_RATIO;
+        const horizontalFov = (value, vertex) => {
+            vertex.sub(center);
+            const radiusXZ = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
+            return Math.max(value, radiusXZ / (this.idealCameraDistance - Math.abs(vertex.y)));
+        };
+        this.fieldOfViewAspect =
+            reduceVertices(this.modelContainer, horizontalFov, 0) / DEFAULT_TAN_FOV;
+        this.target.add(this.modelContainer);
+    }
+    /**
+     * Set's the framedFieldOfView based on the aspect ratio of the window in
+     * order to keep the model fully visible at any camera orientation.
+     */
+    frameModel() {
+        const vertical = DEFAULT_TAN_FOV * Math.max(1, this.fieldOfViewAspect / this.aspect);
+        this.framedFieldOfView = 2 * Math.atan(vertical) * 180 / Math.PI;
+    }
+    /**
+     * Returns the size of the corresponding canvas element.
+     */
+    getSize() {
+        return { width: this.width, height: this.height };
+    }
+    /**
+     * Returns the current camera.
+     */
+    getCamera() {
+        return this.activeCamera;
+    }
+    /**
+     * Sets the passed in camera to be used for rendering.
+     */
+    setCamera(camera) {
+        this.activeCamera = camera;
+    }
+    /**
+     * Sets the point in model coordinates the model should orbit/pivot around.
+     */
+    setTarget(modelX, modelY, modelZ) {
+        this.goalTarget.set(-modelX, -modelY, -modelZ);
+    }
+    /**
+     * Gets the point in model coordinates the model should orbit/pivot around.
+     */
+    getTarget() {
+        return vector3.copy(this.goalTarget).multiplyScalar(-1);
+    }
+    /**
+     * Shifts the model to the target point immediately instead of easing in.
+     */
+    jumpToGoal() {
+        this.updateTarget(SETTLING_TIME);
+    }
+    /**
+     * This should be called every frame with the frame delta to cause the target
+     * to transition to its set point.
+     */
+    updateTarget(delta) {
+        const goal = this.goalTarget;
+        const target = this.target.position;
+        if (!goal.equals(target)) {
+            const radius = this.idealCameraDistance;
+            let { x, y, z } = target;
+            x = this.targetDamperX.update(x, goal.x, delta, radius);
+            y = this.targetDamperY.update(y, goal.y, delta, radius);
+            z = this.targetDamperZ.update(z, goal.z, delta, radius);
+            this.target.position.set(x, y, z);
+            this.target.updateMatrixWorld();
+            this.setShadowRotation(this.yaw);
+            this.isDirty = true;
+        }
+    }
+    /**
+     * Yaw the +z (front) of the model toward the indicated world coordinates.
+     */
+    pointTowards(worldX, worldZ) {
+        const { x, z } = this.position;
+        this.yaw = Math.atan2(worldX - x, worldZ - z);
+    }
+    /**
+     * Yaw is the scene's orientation about the y-axis, around the rotation
+     * center.
+     */
+    set yaw(radiansY) {
+        this.rotation.y = radiansY;
+        this.updateMatrixWorld(true);
+        this.setShadowRotation(radiansY);
+        this.isDirty = true;
+    }
+    get yaw() {
+        return this.rotation.y;
     }
     set animationTime(value) {
         this.mixer.setTime(value);
@@ -52751,6 +51632,13 @@ class Model extends Object3D {
     get animationTime() {
         if (this.currentAnimationAction != null) {
             return this.currentAnimationAction.time;
+        }
+        return 0;
+    }
+    get duration() {
+        if (this.currentAnimationAction != null &&
+            this.currentAnimationAction.getClip()) {
+            return this.currentAnimationAction.getClip().duration;
         }
         return 0;
     }
@@ -52764,6 +51652,9 @@ class Model extends Object3D {
      * to playing the first animation.
      */
     playAnimation(name = null, crossfadeTime = 0) {
+        if (this._currentGLTF == null) {
+            return;
+        }
         const { animations } = this;
         if (animations == null || animations.length === 0) {
             console.warn(`Cannot play animation (model does not have any animations)`);
@@ -52801,67 +51692,32 @@ class Model extends Object3D {
     updateAnimation(step) {
         this.mixer.update(step);
     }
-    clear() {
-        this.url = null;
-        this.userData = { url: null };
-        const gltf = this[$currentGLTF];
-        // Remove all current children
-        if (gltf != null) {
-            for (const child of this.modelContainer.children) {
-                this.modelContainer.remove(child);
-            }
-            gltf.dispose();
-            this[$currentGLTF] = null;
-        }
-        if (this.currentAnimationAction != null) {
-            this.currentAnimationAction.stop();
-            this.currentAnimationAction = null;
-        }
-        this.mixer.stopAllAction();
-        this.mixer.uncacheRoot(this);
-    }
     /**
-     * Calculates the idealCameraDistance and fieldOfViewAspect that allows the 3D
-     * object to be framed tightly in a 2D window of any aspect ratio without
-     * clipping at any camera orbit. The camera's center target point can be
-     * optionally specified. If no center is specified, it defaults to the center
-     * of the bounding box, which means asymmetric models will tend to be tight on
-     * one side instead of both. Proper choice of center can correct this.
+     * Call if the object has been changed in such a way that the shadow's shape
+     * has changed (not a rotation about the Y axis).
      */
-    updateFraming(center = null) {
-        this.remove(this.modelContainer);
-        if (center == null) {
-            this.boundingBox.setFromObject(this.modelContainer);
-            this.boundingBox.getSize(this.size);
-            center = this.boundingBox.getCenter(new Vector3);
+    updateShadow() {
+        const shadow = this.shadow;
+        if (shadow != null) {
+            const side = this.element.arPlacement === 'wall' ? 'back' : 'bottom';
+            shadow.setScene(this, this.shadowSoftness, side);
         }
-        const radiusSquared = (value, vertex) => {
-            return Math.max(value, center.distanceToSquared(vertex));
-        };
-        const framedRadius = Math.sqrt(reduceVertices(this.modelContainer, radiusSquared));
-        this.idealCameraDistance = framedRadius / SAFE_RADIUS_RATIO;
-        const horizontalFov = (value, vertex) => {
-            vertex.sub(center);
-            const radiusXZ = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
-            return Math.max(value, radiusXZ / (this.idealCameraDistance - Math.abs(vertex.y)));
-        };
-        this.fieldOfViewAspect =
-            reduceVertices(this.modelContainer, horizontalFov) / DEFAULT_TAN_FOV;
-        this.add(this.modelContainer);
     }
     /**
      * Sets the shadow's intensity, lazily creating the shadow as necessary.
      */
-    setShadowIntensity(shadowIntensity, shadowSoftness) {
-        let shadow = this[$shadow];
+    setShadowIntensity(shadowIntensity) {
+        this.shadowIntensity = shadowIntensity;
+        let shadow = this.shadow;
+        const side = this.element.arPlacement === 'wall' ? 'back' : 'bottom';
         if (shadow != null) {
             shadow.setIntensity(shadowIntensity);
-            shadow.setModel(this, shadowSoftness);
+            shadow.setScene(this, this.shadowSoftness, side);
         }
         else if (shadowIntensity > 0) {
-            shadow = new Shadow(this, shadowSoftness);
+            shadow = new Shadow(this, this.shadowSoftness, side);
             shadow.setIntensity(shadowIntensity);
-            this[$shadow] = shadow;
+            this.shadow = shadow;
         }
     }
     /**
@@ -52870,7 +51726,8 @@ class Model extends Object3D {
      * changed frequently. Softer shadows are cheaper to render.
      */
     setShadowSoftness(softness) {
-        const shadow = this[$shadow];
+        this.shadowSoftness = softness;
+        const shadow = this.shadow;
         if (shadow != null) {
             shadow.setSoftness(softness);
         }
@@ -52880,17 +51737,17 @@ class Model extends Object3D {
      * this model. The input is the global orientation about the Y axis.
      */
     setShadowRotation(radiansY) {
-        const shadow = this[$shadow];
+        const shadow = this.shadow;
         if (shadow != null) {
             shadow.setRotation(radiansY);
         }
     }
     /**
-     * Call when updating the shadow; returns true if an update is needed and
-     * resets the state.
+     * Call to check if the shadow needs an updated render; returns true if an
+     * update is needed and resets the state.
      */
-    updateShadow() {
-        const shadow = this[$shadow];
+    isShadowDirty() {
+        const shadow = this.shadow;
         if (shadow == null) {
             return false;
         }
@@ -52905,10 +51762,28 @@ class Model extends Object3D {
      * offset (should generally be negative).
      */
     setShadowScaleAndOffset(scale, offset) {
-        const shadow = this[$shadow];
+        const shadow = this.shadow;
         if (shadow != null) {
             shadow.setScaleAndOffset(scale, offset);
         }
+    }
+    /**
+     * This method returns the world position and model-space normal of the point
+     * on the mesh corresponding to the input pixel coordinates given relative to
+     * the model-viewer element. If the mesh is not hit, the result is null.
+     */
+    positionAndNormalFromPoint(pixelPosition, object = this) {
+        raycaster.setFromCamera(pixelPosition, this.getCamera());
+        const hits = raycaster.intersectObject(object, true);
+        if (hits.length === 0) {
+            return null;
+        }
+        const hit = hits[0];
+        if (hit.face == null) {
+            return null;
+        }
+        hit.face.normal.applyNormalMatrix(new Matrix3().getNormalMatrix(hit.object.matrixWorld));
+        return { position: hit.point, normal: hit.face.normal };
     }
     /**
      * The following methods are for operating on the set of Hotspot objects
@@ -52916,16 +51791,16 @@ class Model extends Object3D {
      * the Annotation Mixin.
      */
     addHotspot(hotspot) {
-        this.add(hotspot);
+        this.target.add(hotspot);
     }
     removeHotspot(hotspot) {
-        this.remove(hotspot);
+        this.target.remove(hotspot);
     }
     /**
      * Helper method to apply a function to all hotspots.
      */
     forHotspots(func) {
-        const { children } = this;
+        const { children } = this.target;
         for (let i = 0, l = children.length; i < l; i++) {
             const hotspot = children[i];
             if (hotspot instanceof Hotspot) {
@@ -52942,7 +51817,8 @@ class Model extends Object3D {
             view.copy(viewerPosition);
             target.setFromMatrixPosition(hotspot.matrixWorld);
             view.sub(target);
-            normalWorld.copy(hotspot.normal).transformDirection(this.matrixWorld);
+            normalWorld.copy(hotspot.normal)
+                .transformDirection(this.target.matrixWorld);
             if (view.dot(normalWorld) < 0) {
                 hotspot.hide();
             }
@@ -52970,228 +51846,6 @@ class Model extends Object3D {
         });
     }
 }
-_a$4 = $shadow, _b$2 = $currentGLTF;
-
-/* @license
- * Copyright 2019 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-const DEFAULT_TAN_FOV$1 = Math.tan((DEFAULT_FOV_DEG / 2) * Math.PI / 180);
-const raycaster = new Raycaster();
-const vector3 = new Vector3();
-/**
- * A THREE.Scene object that takes a Model and CanvasHTMLElement and
- * constructs a framed scene based off of the canvas dimensions.
- * Provides lights and cameras to be used in a renderer.
- */
-class ModelScene extends Scene {
-    constructor({ canvas, element, width, height }) {
-        super();
-        this.aspect = 1;
-        this.shadowIntensity = 0;
-        this.shadowSoftness = 1;
-        this.width = 1;
-        this.height = 1;
-        this.isDirty = false;
-        this.context = null;
-        this.exposure = 1;
-        this.canScale = true;
-        this.framedFieldOfView = DEFAULT_FOV_DEG;
-        // These default camera values are never used, as they are reset once the
-        // model is loaded and framing is computed.
-        this.camera = new PerspectiveCamera(45, 1, 0.1, 100);
-        this.goalTarget = new Vector3();
-        this.targetDamperX = new Damper();
-        this.targetDamperY = new Damper();
-        this.targetDamperZ = new Damper();
-        this.name = 'ModelScene';
-        this.element = element;
-        this.canvas = canvas;
-        this.model = new Model();
-        // These default camera values are never used, as they are reset once the
-        // model is loaded and framing is computed.
-        this.camera = new PerspectiveCamera(45, 1, 0.1, 100);
-        this.camera.name = 'MainCamera';
-        this.activeCamera = this.camera;
-        this.add(this.model);
-        this.setSize(width, height);
-        this.model.addEventListener('model-load', (event) => this.onModelLoad(event));
-    }
-    /**
-     * Function to create the context lazily, as when there is only one
-     * <model-viewer> element, the renderer's 3D context can be displayed
-     * directly. This extra context is necessary to copy the renderings into when
-     * there are more than one.
-     */
-    createContext() {
-        {
-            this.context = this.canvas.getContext('2d');
-        }
-    }
-    /**
-     * Sets the model via URL.
-     */
-    async setModelSource(source, progressCallback) {
-        try {
-            await this.model.setSource(this.element, source, progressCallback);
-        }
-        catch (e) {
-            throw new Error(`Could not set model source to '${source}': ${e.message}`);
-        }
-    }
-    /**
-     * Updates the ModelScene for a new container size in CSS pixels.
-     */
-    setSize(width, height) {
-        if (this.width === width && this.height === height) {
-            return;
-        }
-        this.width = Math.max(width, 1);
-        this.height = Math.max(height, 1);
-        this.aspect = this.width / this.height;
-        this.frameModel();
-        this.isDirty = true;
-    }
-    /**
-     * Set's the framedFieldOfView based on the aspect ratio of the window in
-     * order to keep the model fully visible at any camera orientation.
-     */
-    frameModel() {
-        const vertical = DEFAULT_TAN_FOV$1 *
-            Math.max(1, this.model.fieldOfViewAspect / this.aspect);
-        this.framedFieldOfView = 2 * Math.atan(vertical) * 180 / Math.PI;
-    }
-    /**
-     * Returns the size of the corresponding canvas element.
-     */
-    getSize() {
-        return { width: this.width, height: this.height };
-    }
-    /**
-     * Returns the current camera.
-     */
-    getCamera() {
-        return this.activeCamera;
-    }
-    /**
-     * Sets the passed in camera to be used for rendering.
-     */
-    setCamera(camera) {
-        this.activeCamera = camera;
-    }
-    /**
-     * Called when the model's contents have loaded, or changed.
-     */
-    onModelLoad(event) {
-        this.frameModel();
-        this.setShadowIntensity(this.shadowIntensity);
-        this.isDirty = true;
-        this.dispatchEvent({ type: 'model-load', url: event.url });
-    }
-    /**
-     * Sets the point in model coordinates the model should orbit/pivot around.
-     */
-    setTarget(modelX, modelY, modelZ) {
-        this.goalTarget.set(-modelX, -modelY, -modelZ);
-    }
-    /**
-     * Gets the point in model coordinates the model should orbit/pivot around.
-     */
-    getTarget() {
-        return vector3.copy(this.goalTarget).multiplyScalar(-1);
-    }
-    /**
-     * Shifts the model to the target point immediately instead of easing in.
-     */
-    jumpToGoal() {
-        this.updateTarget(SETTLING_TIME);
-    }
-    /**
-     * This should be called every frame with the frame delta to cause the target
-     * to transition to its set point.
-     */
-    updateTarget(delta) {
-        const goal = this.goalTarget;
-        const target = this.model.position;
-        if (!goal.equals(target)) {
-            const radius = this.model.idealCameraDistance;
-            let { x, y, z } = target;
-            x = this.targetDamperX.update(x, goal.x, delta, radius);
-            y = this.targetDamperY.update(y, goal.y, delta, radius);
-            z = this.targetDamperZ.update(z, goal.z, delta, radius);
-            this.model.position.set(x, y, z);
-            this.model.updateMatrixWorld();
-            this.model.setShadowRotation(this.yaw);
-            this.isDirty = true;
-        }
-    }
-    /**
-     * Yaw the +z (front) of the model toward the indicated world coordinates.
-     */
-    pointTowards(worldX, worldZ) {
-        const { x, z } = this.position;
-        this.yaw = Math.atan2(worldX - x, worldZ - z);
-    }
-    /**
-     * Yaw is the scene's orientation about the y-axis, around the rotation
-     * center.
-     */
-    set yaw(radiansY) {
-        this.rotation.y = radiansY;
-        this.model.setShadowRotation(radiansY);
-        this.isDirty = true;
-    }
-    get yaw() {
-        return this.rotation.y;
-    }
-    /**
-     * Sets the shadow's intensity, lazily creating the shadow as necessary.
-     */
-    setShadowIntensity(shadowIntensity) {
-        shadowIntensity = Math.max(shadowIntensity, 0);
-        this.shadowIntensity = shadowIntensity;
-        if (this.model.hasModel()) {
-            this.model.setShadowIntensity(shadowIntensity, this.shadowSoftness);
-        }
-    }
-    /**
-     * Sets the shadow's softness by mapping a [0, 1] softness parameter to the
-     * shadow's resolution. This involves reallocation, so it should not be
-     * changed frequently. Softer shadows are cheaper to render.
-     */
-    setShadowSoftness(softness) {
-        this.shadowSoftness = softness;
-        this.model.setShadowSoftness(softness);
-    }
-    /**
-     * This method returns the world position and model-space normal of the point
-     * on the mesh corresponding to the input pixel coordinates given relative to
-     * the model-viewer element. If the mesh is not hit, the result is null.
-     */
-    positionAndNormalFromPoint(pixelPosition, object = this) {
-        raycaster.setFromCamera(pixelPosition, this.getCamera());
-        const hits = raycaster.intersectObject(object, true);
-        if (hits.length === 0) {
-            return null;
-        }
-        const hit = hits[0];
-        if (hit.face == null) {
-            return null;
-        }
-        hit.face.normal.applyNormalMatrix(new Matrix3().getNormalMatrix(hit.object.matrixWorld));
-        return { position: hit.point, normal: hit.face.normal };
-    }
-}
 
 /**
  * This class generates custom mipmaps for a roughness map by encoding the lost variation in the
@@ -53203,7 +51857,7 @@ class ModelScene extends Scene {
 
 var _mipmapMaterial = _getMipmapMaterial();
 
-var _mesh$1 = new Mesh( new PlaneBufferGeometry( 2, 2 ), _mipmapMaterial );
+var _mesh$1 = new Mesh( new PlaneGeometry( 2, 2 ), _mipmapMaterial );
 
 var _flatCamera$1 = new OrthographicCamera( 0, 1, 0, 1, 0, 1 );
 
@@ -53641,6 +52295,7 @@ const getFirstMapKey = (map) => {
     }
     return firstKey;
 };
+const timePasses = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
 /**
  * @param {EventTarget|EventDispatcher} target
  * @param {string} eventName
@@ -53691,8 +52346,8 @@ const addCorner = (vertices, cornerX, cornerY) => {
 /**
  * This class is a set of two coincident planes. The first is just a cute box
  * outline with rounded corners and damped opacity to indicate the floor extents
- * of a model. It is purposely larger than the model's bounding box by RADIUS on
- * all sides so that small models are still visible / selectable. Its center is
+ * of a scene. It is purposely larger than the scene's bounding box by RADIUS on
+ * all sides so that small scenes are still visible / selectable. Its center is
  * actually carved out by vertices to ensure its fragment shader doesn't add
  * much time.
  *
@@ -53701,13 +52356,13 @@ const addCorner = (vertices, cornerX, cornerY) => {
  * otherwise).
  */
 class PlacementBox extends Mesh {
-    constructor(model) {
+    constructor(scene, side) {
         const geometry = new BufferGeometry();
         const triangles = [];
         const vertices = [];
-        const { size, boundingBox } = model;
+        const { size, boundingBox } = scene;
         const x = size.x / 2;
-        const y = size.z / 2;
+        const y = (side === 'back' ? size.y : size.z) / 2;
         addCorner(vertices, x, y);
         addCorner(vertices, -x, y);
         addCorner(vertices, -x, -y);
@@ -53721,20 +52376,29 @@ class PlacementBox extends Mesh {
         geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
         geometry.setIndex(triangles);
         super(geometry);
+        this.side = side;
         const material = this.material;
         material.side = DoubleSide;
         material.transparent = true;
         material.opacity = 0;
         this.goalOpacity = 0;
         this.opacityDamper = new Damper();
-        this.hitPlane = new Mesh(new PlaneBufferGeometry(size.x + 2 * RADIUS, size.z + 2 * RADIUS));
+        this.hitPlane =
+            new Mesh(new PlaneGeometry(2 * (x + RADIUS), 2 * (y + RADIUS)));
         this.hitPlane.visible = false;
         this.add(this.hitPlane);
-        this.rotateX(-Math.PI / 2);
         boundingBox.getCenter(this.position);
-        this.shadowHeight = boundingBox.min.y;
-        this.position.y = this.shadowHeight;
-        model.add(this);
+        switch (side) {
+            case 'bottom':
+                this.rotateX(-Math.PI / 2);
+                this.shadowHeight = boundingBox.min.y;
+                this.position.y = this.shadowHeight;
+                break;
+            case 'back':
+                this.shadowHeight = boundingBox.min.z;
+                this.position.z = this.shadowHeight;
+        }
+        scene.target.add(this);
     }
     /**
      * Get the world hit position if the touch coordinates hit the box, and null
@@ -53748,14 +52412,24 @@ class PlacementBox extends Mesh {
         return hitResult == null ? null : hitResult.position;
     }
     /**
-     * Offset the height of the box relative to the bottom of the model. Positive
+     * Offset the height of the box relative to the bottom of the scene. Positive
      * is up, so generally only negative values are used.
      */
     set offsetHeight(offset) {
-        this.position.y = this.shadowHeight + offset;
+        if (this.side === 'back') {
+            this.position.z = this.shadowHeight + offset;
+        }
+        else {
+            this.position.y = this.shadowHeight + offset;
+        }
     }
     get offsetHeight() {
-        return this.position.y - this.shadowHeight;
+        if (this.side === 'back') {
+            return this.position.z - this.shadowHeight;
+        }
+        else {
+            return this.position.y - this.shadowHeight;
+        }
     }
     /**
      * Set the box's visibility; it will fade in and out.
@@ -53798,7 +52472,6 @@ class PlacementBox extends Mesh {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$5, _b$3, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x$1, _y$1, _z$1, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12;
 // AR shadow is not user-configurable. This is to pave the way for AR lighting
 // estimation, which will be used once available in WebXR.
 const AR_SHADOW_INTENSITY = 0.3;
@@ -53813,7 +52486,8 @@ const HIT_ANGLE_DEG = 20;
 const INTRO_DAMPER_RATE = 0.4;
 const SCALE_SNAP_HIGH = 1.2;
 const SCALE_SNAP_LOW = 1 / SCALE_SNAP_HIGH;
-// For automatic dynamic viewport scaling, don't let the scale drop below this limit.
+// For automatic dynamic viewport scaling, don't let the scale drop below this
+// limit.
 const MIN_VIEWPORT_SCALE = 0.25;
 const ARStatus = {
     NOT_PRESENTING: 'not-presenting',
@@ -53821,52 +52495,6 @@ const ARStatus = {
     OBJECT_PLACED: 'object-placed',
     FAILED: 'failed'
 };
-const $presentedScene = Symbol('presentedScene');
-const $placementBox = Symbol('placementBox');
-const $lastTick = Symbol('lastTick');
-const $turntableRotation = Symbol('turntableRotation');
-const $oldShadowIntensity = Symbol('oldShadowIntensity');
-const $oldBackground = Symbol('oldBackground');
-const $rafId = Symbol('rafId');
-const $currentSession = Symbol('currentSession');
-const $tick = Symbol('tick');
-const $refSpace = Symbol('refSpace');
-const $viewerRefSpace = Symbol('viewerRefSpace');
-const $frame = Symbol('frame');
-const $initialized = Symbol('initialized');
-const $initialModelToWorld = Symbol('initialModelToWorld');
-const $placementComplete = Symbol('placementComplete');
-const $initialHitSource = Symbol('hitTestSource');
-const $transientHitTestSource = Symbol('transiertHitTestSource');
-const $inputSource = Symbol('inputSource');
-const $isTranslating = Symbol('isTranslating');
-const $isRotating = Symbol('isRotating');
-const $isScaling = Symbol('isScaling');
-const $lastDragPosition = Symbol('lastDragPosition');
-const $lastScalar = Symbol('lastScalar');
-const $goalPosition = Symbol('goalPosition');
-const $goalYaw = Symbol('goalYaw');
-const $goalScale = Symbol('goalScale');
-const $xDamper = Symbol('xDamper');
-const $yDamper = Symbol('yDamper');
-const $zDamper = Symbol('zDamper');
-const $yawDamper = Symbol('yawDamper');
-const $scaleDamper = Symbol('scaleDamper');
-const $damperRate = Symbol('damperRate');
-const $resolveCleanup = Symbol('resolveCleanup');
-const $exitWebXRButtonContainer = Symbol('exitWebXRButtonContainer');
-const $onWebXRFrame = Symbol('onWebXRFrame');
-const $postSessionCleanup = Symbol('postSessionCleanup');
-const $updateCamera = Symbol('updateCamera');
-const $placeInitially = Symbol('placeInitially');
-const $getHitPoint = Symbol('getHitPoint');
-const $onSelectStart = Symbol('onSelectStart');
-const $onSelectEnd = Symbol('onSelect');
-const $onUpdateScene = Symbol('onUpdateScene');
-const $fingerSeparation = Symbol('fingerSeparation');
-const $processInput = Symbol('processInput');
-const $moveScene = Symbol('moveScene');
-const $onExitWebXRButtonContainerClick = Symbol('onExitWebXRButtonContainerClick');
 const vector3$1 = new Vector3();
 const matrix4 = new Matrix4();
 const hitPosition = new Vector3();
@@ -53875,82 +52503,84 @@ class ARRenderer extends EventDispatcher {
         super();
         this.renderer = renderer;
         this.camera = new PerspectiveCamera();
-        this[_a$5] = null;
-        this[_b$3] = null;
-        this[_c] = null;
-        this[_d] = null;
-        this[_e] = null;
-        this[_f] = null;
-        this[_g] = null;
-        this[_h] = null;
-        this[_j] = null;
-        this[_k] = null;
-        this[_l] = null;
-        this[_m] = null;
-        this[_o] = null;
-        this[_p] = null;
-        this[_q] = null;
-        this[_r] = null;
-        this[_s] = false;
-        this[_t] = new Matrix4();
-        this[_u] = false;
-        this[_v] = false;
-        this[_w] = false;
-        this[_x$1] = false;
-        this[_y$1] = new Vector3();
-        this[_z$1] = 0;
-        this[_0] = new Vector3();
-        this[_1] = 0;
-        this[_2] = 1;
-        this[_3] = new Damper();
-        this[_4] = new Damper();
-        this[_5] = new Damper();
-        this[_6] = new Damper();
-        this[_7] = new Damper();
-        this[_8] = 1;
-        this[_9] = () => this.stopPresenting();
-        this[_10] = () => {
-            if (this[$placementBox] != null && this.isPresenting) {
-                this[$placementBox].dispose();
-                this[$placementBox] = new PlacementBox(this[$presentedScene].model);
+        this.currentSession = null;
+        this.placeOnWall = false;
+        this.placementBox = null;
+        this.lastTick = null;
+        this.turntableRotation = null;
+        this.oldShadowIntensity = null;
+        this.oldBackground = null;
+        this.rafId = null;
+        this.refSpace = null;
+        this.viewerRefSpace = null;
+        this.frame = null;
+        this.initialHitSource = null;
+        this.transientHitTestSource = null;
+        this.inputSource = null;
+        this._presentedScene = null;
+        this.resolveCleanup = null;
+        this.exitWebXRButtonContainer = null;
+        this.initialModelToWorld = null;
+        this.initialized = false;
+        this.oldTarget = new Vector3();
+        this.placementComplete = false;
+        this.isTranslating = false;
+        this.isRotating = false;
+        this.isScaling = false;
+        this.lastDragPosition = new Vector3();
+        this.lastScalar = 0;
+        this.goalPosition = new Vector3();
+        this.goalYaw = 0;
+        this.goalScale = 1;
+        this.xDamper = new Damper();
+        this.yDamper = new Damper();
+        this.zDamper = new Damper();
+        this.yawDamper = new Damper();
+        this.scaleDamper = new Damper();
+        this.damperRate = 1;
+        this.onExitWebXRButtonContainerClick = () => this.stopPresenting();
+        this.onUpdateScene = () => {
+            if (this.placementBox != null && this.isPresenting) {
+                this.placementBox.dispose();
+                this.placementBox = new PlacementBox(this.presentedScene, this.placeOnWall ? 'back' : 'bottom');
             }
         };
-        this[_11] = (event) => {
-            const hitSource = this[$transientHitTestSource];
+        this.onSelectStart = (event) => {
+            const hitSource = this.transientHitTestSource;
             if (hitSource == null) {
                 return;
             }
-            const fingers = this[$frame].getHitTestResultsForTransientInput(hitSource);
-            const scene = this[$presentedScene];
-            const box = this[$placementBox];
+            const fingers = this.frame.getHitTestResultsForTransientInput(hitSource);
+            const scene = this.presentedScene;
+            const box = this.placementBox;
             if (fingers.length === 1) {
-                this[$inputSource] = event.inputSource;
-                const { axes } = this[$inputSource].gamepad;
-                const hitPosition = box.getHit(this[$presentedScene], axes[0], axes[1]);
+                this.inputSource = event.inputSource;
+                const { axes } = this.inputSource.gamepad;
+                const hitPosition = box.getHit(this.presentedScene, axes[0], axes[1]);
                 box.show = true;
                 if (hitPosition != null) {
-                    this[$isTranslating] = true;
-                    this[$lastDragPosition].copy(hitPosition);
+                    this.isTranslating = true;
+                    this.lastDragPosition.copy(hitPosition);
                 }
-                else {
-                    this[$isRotating] = true;
-                    this[$lastScalar] = axes[0];
+                else if (this.placeOnWall === false) {
+                    this.isRotating = true;
+                    this.lastScalar = axes[0];
                 }
             }
             else if (fingers.length === 2 && scene.canScale) {
                 box.show = true;
-                this[$isScaling] = true;
-                this[$lastScalar] = this[$fingerSeparation](fingers) / scene.scale.x;
+                this.isScaling = true;
+                this.lastScalar = this.fingerSeparation(fingers) / scene.scale.x;
             }
         };
-        this[_12] = () => {
-            this[$isTranslating] = false;
-            this[$isRotating] = false;
-            this[$isScaling] = false;
-            this[$inputSource] = null;
-            this[$goalPosition].y +=
-                this[$placementBox].offsetHeight * this[$presentedScene].scale.x;
-            this[$placementBox].show = false;
+        this.onSelectEnd = () => {
+            this.isTranslating = false;
+            this.isRotating = false;
+            this.isScaling = false;
+            this.inputSource = null;
+            this.goalPosition.y +=
+                this.placementBox.offsetHeight * this.presentedScene.scale.x;
+            this.placementBox.show = false;
         };
         this.threeRenderer = renderer.threeRenderer;
         // Turn this off, as the matrix is set directly from webXR rather than using
@@ -53964,7 +52594,7 @@ class ARRenderer extends EventDispatcher {
             optionalFeatures: ['dom-overlay'],
             domOverlay: { root: scene.element.shadowRoot.querySelector('div.default') }
         });
-        const gl = this.threeRenderer.context;
+        const gl = this.threeRenderer.getContext();
         // `makeXRCompatible` replaced `setCompatibleXRDevice` in Chrome M73 @TODO
         // #293, handle WebXR API changes. WARNING: this can cause a GL context
         // loss according to the spec, though current implementations don't do so.
@@ -53985,15 +52615,15 @@ class ARRenderer extends EventDispatcher {
         this.threeRenderer.setSize(framebufferWidth, framebufferHeight, false);
         const exitButton = scene.element.shadowRoot.querySelector('.slot.exit-webxr-ar-button');
         exitButton.classList.add('enabled');
-        exitButton.addEventListener('click', this[$onExitWebXRButtonContainerClick]);
-        this[$exitWebXRButtonContainer] = exitButton;
+        exitButton.addEventListener('click', this.onExitWebXRButtonContainerClick);
+        this.exitWebXRButtonContainer = exitButton;
         return session;
     }
     /**
      * The currently presented scene, if any
      */
     get presentedScene() {
-        return this[$presentedScene];
+        return this._presentedScene;
     }
     /**
      * Resolves to true if the renderer has detected all the necessary qualities
@@ -54018,44 +52648,47 @@ class ARRenderer extends EventDispatcher {
         let waitForAnimationFrame = new Promise((resolve, _reject) => {
             requestAnimationFrame(() => resolve());
         });
-        scene.model.setHotspotsVisibility(false);
+        scene.setHotspotsVisibility(false);
         scene.isDirty = true;
         // Render a frame to turn off the hotspots
         await waitForAnimationFrame;
         // This sets isPresenting to true
-        this[$presentedScene] = scene;
+        this._presentedScene = scene;
         const currentSession = await this.resolveARSession(scene);
         currentSession.addEventListener('end', () => {
-            this[$postSessionCleanup]();
+            this.postSessionCleanup();
         }, { once: true });
-        this[$refSpace] = await currentSession.requestReferenceSpace('local');
-        this[$viewerRefSpace] =
-            await currentSession.requestReferenceSpace('viewer');
+        this.refSpace = await currentSession.requestReferenceSpace('local');
+        this.viewerRefSpace = await currentSession.requestReferenceSpace('viewer');
         scene.setCamera(this.camera);
-        this[$initialized] = false;
-        this[$damperRate] = INTRO_DAMPER_RATE;
-        this[$turntableRotation] = scene.yaw;
+        this.initialized = false;
+        this.damperRate = INTRO_DAMPER_RATE;
+        this.turntableRotation = scene.yaw;
         scene.yaw = 0;
-        this[$goalYaw] = 0;
-        this[$goalScale] = 1;
-        this[$oldBackground] = scene.background;
+        this.goalYaw = 0;
+        this.goalScale = 1;
+        this.oldBackground = scene.background;
         scene.background = null;
-        this[$oldShadowIntensity] = scene.shadowIntensity;
+        this.oldShadowIntensity = scene.shadowIntensity;
         scene.setShadowIntensity(0);
-        scene.addEventListener('model-load', this[$onUpdateScene]);
+        this.oldTarget.copy(scene.getTarget());
+        scene.addEventListener('model-load', this.onUpdateScene);
         const radians = HIT_ANGLE_DEG * Math.PI / 180;
-        const ray = new XRRay(new DOMPoint(0, 0, 0), { x: 0, y: -Math.sin(radians), z: -Math.cos(radians) });
+        const ray = this.placeOnWall === true ?
+            undefined :
+            new XRRay(new DOMPoint(0, 0, 0), { x: 0, y: -Math.sin(radians), z: -Math.cos(radians) });
         currentSession
-            .requestHitTestSource({ space: this[$viewerRefSpace], offsetRay: ray })
+            .requestHitTestSource({ space: this.viewerRefSpace, offsetRay: ray })
             .then(hitTestSource => {
-            this[$initialHitSource] = hitTestSource;
+            this.initialHitSource = hitTestSource;
         });
-        this[$currentSession] = currentSession;
-        this[$placementBox] = new PlacementBox(scene.model);
-        this[$placementComplete] = false;
-        this[$lastTick] = performance.now();
+        this.currentSession = currentSession;
+        this.placementBox =
+            new PlacementBox(scene, this.placeOnWall ? 'back' : 'bottom');
+        this.placementComplete = false;
+        this.lastTick = performance.now();
         // Start the event loop.
-        this[$tick]();
+        this.tick();
     }
     /**
      * If currently presenting a scene in AR, stops presentation and exits AR.
@@ -54065,149 +52698,160 @@ class ARRenderer extends EventDispatcher {
             return;
         }
         const cleanupPromise = new Promise((resolve) => {
-            this[$resolveCleanup] = resolve;
+            this.resolveCleanup = resolve;
         });
         try {
-            await this[$currentSession].end();
+            await this.currentSession.end();
             await cleanupPromise;
         }
         catch (error) {
             console.warn('Error while trying to end AR session');
             console.warn(error);
-            this[$postSessionCleanup]();
+            this.postSessionCleanup();
         }
-    }
-    [(_a$5 = $placementBox, _b$3 = $lastTick, _c = $turntableRotation, _d = $oldShadowIntensity, _e = $oldBackground, _f = $rafId, _g = $currentSession, _h = $refSpace, _j = $viewerRefSpace, _k = $frame, _l = $initialHitSource, _m = $transientHitTestSource, _o = $inputSource, _p = $presentedScene, _q = $resolveCleanup, _r = $exitWebXRButtonContainer, _s = $initialized, _t = $initialModelToWorld, _u = $placementComplete, _v = $isTranslating, _w = $isRotating, _x$1 = $isScaling, _y$1 = $lastDragPosition, _z$1 = $lastScalar, _0 = $goalPosition, _1 = $goalYaw, _2 = $goalScale, _3 = $xDamper, _4 = $yDamper, _5 = $zDamper, _6 = $yawDamper, _7 = $scaleDamper, _8 = $damperRate, _9 = $onExitWebXRButtonContainerClick, $postSessionCleanup)]() {
-        // The offscreen WebXR framebuffer is now invalid, switch
-        // back to the default framebuffer for canvas output.
-        // TODO: this method should be added to three.js's exported interface.
-        this.threeRenderer.setFramebuffer(null);
-        const session = this[$currentSession];
-        if (session != null) {
-            session.removeEventListener('selectstart', this[$onSelectStart]);
-            session.removeEventListener('selectend', this[$onSelectEnd]);
-            session.cancelAnimationFrame(this[$rafId]);
-            this[$currentSession] = null;
-        }
-        const scene = this[$presentedScene];
-        if (scene != null) {
-            const { model, element } = scene;
-            scene.setCamera(scene.camera);
-            model.remove(this[$placementBox]);
-            scene.position.set(0, 0, 0);
-            scene.scale.set(1, 1, 1);
-            model.setShadowScaleAndOffset(1, 0);
-            const yaw = this[$turntableRotation];
-            if (yaw != null) {
-                scene.yaw = yaw;
-            }
-            const intensity = this[$oldShadowIntensity];
-            if (intensity != null) {
-                scene.setShadowIntensity(intensity);
-            }
-            const background = this[$oldBackground];
-            if (background != null) {
-                scene.background = background;
-            }
-            scene.removeEventListener('model-load', this[$onUpdateScene]);
-            model.orientHotspots(0);
-            element.requestUpdate('cameraTarget');
-            element[$onResize](element.getBoundingClientRect());
-        }
-        // Force the Renderer to update its size
-        this.renderer.height = 0;
-        const exitButton = this[$exitWebXRButtonContainer];
-        if (exitButton != null) {
-            exitButton.classList.remove('enabled');
-            exitButton.removeEventListener('click', this[$onExitWebXRButtonContainerClick]);
-            this[$exitWebXRButtonContainer] = null;
-        }
-        const hitSource = this[$transientHitTestSource];
-        if (hitSource != null) {
-            hitSource.cancel();
-            this[$transientHitTestSource] = null;
-        }
-        const hitSourceInitial = this[$initialHitSource];
-        if (hitSourceInitial != null) {
-            hitSourceInitial.cancel();
-            this[$initialHitSource] = null;
-        }
-        if (this[$placementBox] != null) {
-            this[$placementBox].dispose();
-            this[$placementBox] = null;
-        }
-        this[$lastTick] = null;
-        this[$turntableRotation] = null;
-        this[$oldShadowIntensity] = null;
-        this[$oldBackground] = null;
-        this[$rafId] = null;
-        this[$refSpace] = null;
-        this[$presentedScene] = null;
-        this[$viewerRefSpace] = null;
-        this[$frame] = null;
-        this[$inputSource] = null;
-        if (this[$resolveCleanup] != null) {
-            this[$resolveCleanup]();
-        }
-        this.dispatchEvent({ type: 'status', status: ARStatus.NOT_PRESENTING });
     }
     /**
      * True if a scene is currently in the process of being presented in AR
      */
     get isPresenting() {
-        return this[$presentedScene] != null;
+        return this.presentedScene != null;
+    }
+    get target() {
+        return this.oldTarget;
     }
     updateTarget() {
-        const scene = this[$presentedScene];
+        const scene = this.presentedScene;
         if (scene != null) {
-            // Move the scene's target to the model's floor height.
             const target = scene.getTarget();
-            scene.setTarget(target.x, scene.model.boundingBox.min.y, target.z);
+            this.oldTarget.copy(target);
+            if (this.placeOnWall) {
+                // Move the scene's target to the center of the back of the model's
+                // bounding box.
+                scene.setTarget(target.x, target.y, scene.boundingBox.min.z);
+            }
+            else {
+                // Move the scene's target to the model's floor height.
+                scene.setTarget(target.x, scene.boundingBox.min.y, target.z);
+            }
         }
     }
-    [(_10 = $onUpdateScene, $updateCamera)](view) {
+    postSessionCleanup() {
+        // The offscreen WebXR framebuffer is now invalid, switch
+        // back to the default framebuffer for canvas output.
+        // TODO: this method should be added to three.js's exported interface.
+        this.threeRenderer.setFramebuffer(null);
+        const session = this.currentSession;
+        if (session != null) {
+            session.removeEventListener('selectstart', this.onSelectStart);
+            session.removeEventListener('selectend', this.onSelectEnd);
+            session.cancelAnimationFrame(this.rafId);
+            this.currentSession = null;
+        }
+        const scene = this.presentedScene;
+        if (scene != null) {
+            const { target, element } = scene;
+            scene.setCamera(scene.camera);
+            target.remove(this.placementBox);
+            scene.position.set(0, 0, 0);
+            scene.scale.set(1, 1, 1);
+            scene.setShadowScaleAndOffset(1, 0);
+            const yaw = this.turntableRotation;
+            if (yaw != null) {
+                scene.yaw = yaw;
+            }
+            const intensity = this.oldShadowIntensity;
+            if (intensity != null) {
+                scene.setShadowIntensity(intensity);
+            }
+            const background = this.oldBackground;
+            if (background != null) {
+                scene.background = background;
+            }
+            const point = this.oldTarget;
+            scene.setTarget(point.x, point.y, point.z);
+            scene.removeEventListener('model-load', this.onUpdateScene);
+            scene.orientHotspots(0);
+            element.requestUpdate('cameraTarget');
+            element[$onResize](element.getBoundingClientRect());
+        }
+        // Force the Renderer to update its size
+        this.renderer.height = 0;
+        const exitButton = this.exitWebXRButtonContainer;
+        if (exitButton != null) {
+            exitButton.classList.remove('enabled');
+            exitButton.removeEventListener('click', this.onExitWebXRButtonContainerClick);
+            this.exitWebXRButtonContainer = null;
+        }
+        const hitSource = this.transientHitTestSource;
+        if (hitSource != null) {
+            hitSource.cancel();
+            this.transientHitTestSource = null;
+        }
+        const hitSourceInitial = this.initialHitSource;
+        if (hitSourceInitial != null) {
+            hitSourceInitial.cancel();
+            this.initialHitSource = null;
+        }
+        if (this.placementBox != null) {
+            this.placementBox.dispose();
+            this.placementBox = null;
+        }
+        this.lastTick = null;
+        this.turntableRotation = null;
+        this.oldShadowIntensity = null;
+        this.oldBackground = null;
+        this.rafId = null;
+        this.refSpace = null;
+        this._presentedScene = null;
+        this.viewerRefSpace = null;
+        this.frame = null;
+        this.inputSource = null;
+        if (this.resolveCleanup != null) {
+            this.resolveCleanup();
+        }
+        this.dispatchEvent({ type: 'status', status: ARStatus.NOT_PRESENTING });
+    }
+    updateCamera(view) {
         const { camera } = this;
         const { matrix: cameraMatrix } = camera;
         cameraMatrix.fromArray(view.transform.matrix);
         camera.updateMatrixWorld(true);
         // position is not updated when matrix is updated.
         camera.position.setFromMatrixPosition(cameraMatrix);
-        if (this[$initialHitSource] != null) {
-            // Target locked to screen center
-            const { position, model } = this[$presentedScene];
-            const radius = model.idealCameraDistance;
-            camera.getWorldDirection(position);
-            position.multiplyScalar(radius);
-            position.add(camera.position);
-        }
-        if (!this[$initialized]) {
+        if (!this.initialized) {
             camera.projectionMatrix.fromArray(view.projectionMatrix);
             // Have to set the inverse manually when setting matrix directly. This is
             // needed for raycasting.
-            camera.projectionMatrixInverse.getInverse(camera.projectionMatrix);
+            camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
             // Orient model toward camera on first frame.
-            const { x, z } = camera.position;
-            const scene = this[$presentedScene];
-            scene.pointTowards(x, z);
-            scene.model.updateMatrixWorld(true);
-            this[$goalYaw] = scene.yaw;
-            this[$initialModelToWorld].copy(scene.model.matrixWorld);
-            scene.model.setHotspotsVisibility(true);
-            this[$initialized] = true;
+            const scene = this.presentedScene;
+            camera.getWorldDirection(vector3$1);
+            scene.yaw = Math.atan2(-vector3$1.x, -vector3$1.z);
+            this.goalYaw = scene.yaw;
+            this.initialModelToWorld = new Matrix4().copy(scene.matrixWorld);
+            scene.setHotspotsVisibility(true);
+            this.initialized = true;
             this.dispatchEvent({ type: 'status', status: ARStatus.SESSION_STARTED });
+        }
+        if (this.initialHitSource != null) {
+            // Target locked to screen center
+            const { position, idealCameraDistance: radius } = this.presentedScene;
+            camera.getWorldDirection(position);
+            position.multiplyScalar(radius);
+            position.add(camera.position);
         }
         // Use automatic dynamic viewport scaling if supported.
         if (view.requestViewportScale && view.recommendedViewportScale) {
             const scale = view.recommendedViewportScale;
             view.requestViewportScale(Math.max(scale, MIN_VIEWPORT_SCALE));
         }
-        const layer = this[$currentSession].renderState.baseLayer;
+        const layer = this.currentSession.renderState.baseLayer;
         const viewport = layer.getViewport(view);
         this.threeRenderer.setViewport(viewport.x, viewport.y, viewport.width, viewport.height);
-        this[$presentedScene].model.orientHotspots(Math.atan2(cameraMatrix.elements[1], cameraMatrix.elements[5]));
+        this.presentedScene.orientHotspots(Math.atan2(cameraMatrix.elements[1], cameraMatrix.elements[5]));
     }
-    [$placeInitially](frame) {
-        const hitSource = this[$initialHitSource];
+    placeInitially(frame) {
+        const hitSource = this.initialHitSource;
         if (hitSource == null) {
             return;
         }
@@ -54216,31 +52860,35 @@ class ARRenderer extends EventDispatcher {
             return;
         }
         const hit = hitTestResults[0];
-        const hitMatrix = this[$getHitPoint](hit);
-        if (hitMatrix == null) {
+        const hitPoint = this.getHitPoint(hit);
+        if (hitPoint == null) {
             return;
         }
-        this.placeModel(hitMatrix);
+        this.placeModel(hitPoint);
         hitSource.cancel();
-        this[$initialHitSource] = null;
+        this.initialHitSource = null;
         const { session } = frame;
-        session.addEventListener('selectstart', this[$onSelectStart]);
-        session.addEventListener('selectend', this[$onSelectEnd]);
+        session.addEventListener('selectstart', this.onSelectStart);
+        session.addEventListener('selectend', this.onSelectEnd);
         session
             .requestHitTestSourceForTransientInput({ profile: 'generic-touchscreen' })
             .then(hitTestSource => {
-            this[$transientHitTestSource] = hitTestSource;
+            this.transientHitTestSource = hitTestSource;
         });
     }
-    [$getHitPoint](hitResult) {
-        const pose = hitResult.getPose(this[$refSpace]);
+    getHitPoint(hitResult) {
+        const pose = hitResult.getPose(this.refSpace);
         if (pose == null) {
             return null;
         }
         const hitMatrix = matrix4.fromArray(pose.transform.matrix);
+        if (this.placeOnWall === true) {
+            // Orient the model to the wall's normal vector.
+            this.goalYaw = Math.atan2(hitMatrix.elements[4], hitMatrix.elements[6]);
+        }
         // Check that the y-coordinate of the normal is large enough that the normal
-        // is pointing up.
-        return hitMatrix.elements[5] > 0.75 ?
+        // is pointing up for floor placement; opposite for wall placement.
+        return hitMatrix.elements[5] > 0.75 !== this.placeOnWall ?
             hitPosition.setFromMatrixPosition(hitMatrix) :
             null;
     }
@@ -54257,70 +52905,70 @@ class ARRenderer extends EventDispatcher {
      * This ensures the model is placed according to the chosen target, is not
      * reoriented, and does not intersect the camera even when the model
      * is large (unless the target is chosen outside of the model's bounding box).
+     *
+     * Only a public method to make it testable.
      */
     placeModel(hit) {
-        const scene = this[$presentedScene];
-        const { model } = scene;
-        const { min, max } = model.boundingBox;
-        this[$placementBox].show = true;
-        const goal = this[$goalPosition];
+        const scene = this.presentedScene;
+        this.placementBox.show = true;
+        const goal = this.goalPosition;
         goal.copy(hit);
-        const floor = hit.y;
-        const origin = this.camera.position.clone();
-        const direction = hit.clone().sub(origin).normalize();
-        // Pull camera back enough to be outside of large models.
-        origin.sub(direction.multiplyScalar(model.idealCameraDistance));
-        const ray = new Ray(origin, direction.normalize());
-        const modelToWorld = this[$initialModelToWorld];
-        const modelPosition = new Vector3().setFromMatrixPosition(modelToWorld).add(hit);
-        modelToWorld.setPosition(modelPosition);
-        const world2Model = new Matrix4().getInverse(modelToWorld);
-        ray.applyMatrix4(world2Model);
-        // Make the box tall so that we don't intersect the top face.
-        max.y += 10;
-        ray.intersectBox(model.boundingBox, modelPosition);
-        max.y -= 10;
-        if (modelPosition != null) {
-            modelPosition.applyMatrix4(modelToWorld);
-            goal.add(hit).sub(modelPosition);
+        if (this.placeOnWall === false) {
+            const floor = hit.y;
+            const origin = this.camera.position.clone();
+            const direction = hit.clone().sub(origin).normalize();
+            // Pull camera back enough to be outside of large models.
+            origin.sub(direction.multiplyScalar(scene.idealCameraDistance));
+            const ray = new Ray(origin, direction.normalize());
+            const modelToWorld = this.initialModelToWorld;
+            const modelPosition = new Vector3().setFromMatrixPosition(modelToWorld).add(hit);
+            modelToWorld.setPosition(modelPosition);
+            ray.applyMatrix4(modelToWorld.invert());
+            // Make the box tall so that we don't intersect the top face.
+            const { max } = scene.boundingBox;
+            max.y += 10;
+            ray.intersectBox(scene.boundingBox, modelPosition);
+            max.y -= 10;
+            if (modelPosition != null) {
+                modelPosition.applyMatrix4(modelToWorld);
+                goal.add(hit).sub(modelPosition);
+            }
+            // Ignore the y-coordinate and set on the floor instead.
+            goal.y = floor;
         }
-        // Move the scene's target to the model's floor height.
-        const target = scene.getTarget();
-        scene.setTarget(target.x, min.y, target.z);
-        // Ignore the y-coordinate and set on the floor instead.
-        goal.y = floor;
+        this.updateTarget();
         this.dispatchEvent({ type: 'status', status: ARStatus.OBJECT_PLACED });
     }
-    [(_11 = $onSelectStart, _12 = $onSelectEnd, $fingerSeparation)](fingers) {
+    fingerSeparation(fingers) {
         const fingerOne = fingers[0].inputSource.gamepad.axes;
         const fingerTwo = fingers[1].inputSource.gamepad.axes;
         const deltaX = fingerTwo[0] - fingerOne[0];
         const deltaY = fingerTwo[1] - fingerOne[1];
         return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     }
-    [$processInput](frame) {
-        const hitSource = this[$transientHitTestSource];
+    processInput(frame) {
+        const hitSource = this.transientHitTestSource;
         if (hitSource == null) {
             return;
         }
-        if (!this[$isTranslating] && !this[$isScaling] && !this[$isRotating]) {
+        if (!this.isTranslating && !this.isScaling && !this.isRotating) {
             return;
         }
         const fingers = frame.getHitTestResultsForTransientInput(hitSource);
-        const scene = this[$presentedScene];
+        const scene = this.presentedScene;
         const scale = scene.scale.x;
         // Rotating, translating and scaling are mutually exclusive operations; only
         // one can happen at a time, but we can switch during a gesture.
-        if (this[$isScaling]) {
+        if (this.isScaling) {
             if (fingers.length < 2) {
                 // If we lose the second finger, stop scaling (in fact, stop processing
                 // input altogether until a new gesture starts).
-                this[$isScaling] = false;
+                this.isScaling = false;
             }
             else {
-                const separation = this[$fingerSeparation](fingers);
-                const scale = separation / this[$lastScalar];
-                this[$goalScale] =
+                const separation = this.fingerSeparation(fingers);
+                const scale = separation / this.lastScalar;
+                this.goalScale =
                     (scale < SCALE_SNAP_HIGH && scale > SCALE_SNAP_LOW) ? 1 : scale;
             }
             return;
@@ -54328,92 +52976,94 @@ class ARRenderer extends EventDispatcher {
         else if (fingers.length === 2 && scene.canScale) {
             // If we were rotating or translating and we get a second finger, switch
             // to scaling instead.
-            this[$isTranslating] = false;
-            this[$isRotating] = false;
-            this[$isScaling] = true;
-            this[$lastScalar] = this[$fingerSeparation](fingers) / scale;
+            this.isTranslating = false;
+            this.isRotating = false;
+            this.isScaling = true;
+            this.lastScalar = this.fingerSeparation(fingers) / scale;
             return;
         }
-        if (this[$isRotating]) {
-            const thisDragX = this[$inputSource].gamepad.axes[0];
-            this[$goalYaw] += (thisDragX - this[$lastScalar]) * ROTATION_RATE;
-            this[$lastScalar] = thisDragX;
+        if (this.isRotating) {
+            const thisDragX = this.inputSource.gamepad.axes[0];
+            this.goalYaw += (thisDragX - this.lastScalar) * ROTATION_RATE;
+            this.lastScalar = thisDragX;
         }
-        else if (this[$isTranslating]) {
+        else if (this.isTranslating) {
             fingers.forEach(finger => {
-                if (finger.inputSource !== this[$inputSource] ||
+                if (finger.inputSource !== this.inputSource ||
                     finger.results.length < 1) {
                     return;
                 }
-                const hit = this[$getHitPoint](finger.results[0]);
+                const hit = this.getHitPoint(finger.results[0]);
                 if (hit == null) {
                     return;
                 }
-                this[$goalPosition].sub(this[$lastDragPosition]);
-                const offset = hit.y - this[$lastDragPosition].y;
-                // When a lower floor is found, keep the model at the same height, but
-                // drop the placement box to the floor. The model falls on select end.
-                if (offset < 0) {
-                    this[$placementBox].offsetHeight = offset / scale;
-                    this[$presentedScene].model.setShadowScaleAndOffset(scale, offset);
-                    // Interpolate hit ray up to drag plane
-                    const cameraPosition = vector3$1.copy(this.camera.position);
-                    const alpha = -offset / (cameraPosition.y - hit.y);
-                    cameraPosition.multiplyScalar(alpha);
-                    hit.multiplyScalar(1 - alpha).add(cameraPosition);
+                this.goalPosition.sub(this.lastDragPosition);
+                if (this.placeOnWall === false) {
+                    const offset = hit.y - this.lastDragPosition.y;
+                    // When a lower floor is found, keep the model at the same height, but
+                    // drop the placement box to the floor. The model falls on select end.
+                    if (offset < 0) {
+                        this.placementBox.offsetHeight = offset / scale;
+                        this.presentedScene.setShadowScaleAndOffset(scale, offset);
+                        // Interpolate hit ray up to drag plane
+                        const cameraPosition = vector3$1.copy(this.camera.position);
+                        const alpha = -offset / (cameraPosition.y - hit.y);
+                        cameraPosition.multiplyScalar(alpha);
+                        hit.multiplyScalar(1 - alpha).add(cameraPosition);
+                    }
                 }
-                this[$goalPosition].add(hit);
-                this[$lastDragPosition].copy(hit);
+                this.goalPosition.add(hit);
+                this.lastDragPosition.copy(hit);
             });
         }
     }
-    [$moveScene](delta) {
-        const scene = this[$presentedScene];
-        const { model, position, yaw } = scene;
-        const radius = model.idealCameraDistance;
-        const goal = this[$goalPosition];
+    moveScene(delta) {
+        const scene = this.presentedScene;
+        const { position, yaw, idealCameraDistance: radius } = scene;
+        const goal = this.goalPosition;
         const oldScale = scene.scale.x;
-        const box = this[$placementBox];
-        if (this[$initialHitSource] == null &&
-            (!goal.equals(position) || this[$goalScale] !== oldScale)) {
+        const box = this.placementBox;
+        if (this.initialHitSource == null &&
+            (!goal.equals(position) || this.goalScale !== oldScale)) {
             let { x, y, z } = position;
-            delta *= this[$damperRate];
-            x = this[$xDamper].update(x, goal.x, delta, radius);
-            y = this[$yDamper].update(y, goal.y, delta, radius);
-            z = this[$zDamper].update(z, goal.z, delta, radius);
+            delta *= this.damperRate;
+            x = this.xDamper.update(x, goal.x, delta, radius);
+            y = this.yDamper.update(y, goal.y, delta, radius);
+            z = this.zDamper.update(z, goal.z, delta, radius);
             position.set(x, y, z);
-            const newScale = this[$scaleDamper].update(oldScale, this[$goalScale], delta, 1);
+            const newScale = this.scaleDamper.update(oldScale, this.goalScale, delta, 1);
             scene.scale.set(newScale, newScale, newScale);
-            if (!this[$isTranslating]) {
+            if (!this.isTranslating) {
                 const offset = goal.y - y;
-                if (this[$placementComplete]) {
+                if (this.placementComplete && this.placeOnWall === false) {
                     box.offsetHeight = offset / newScale;
-                    model.setShadowScaleAndOffset(newScale, offset);
+                    scene.setShadowScaleAndOffset(newScale, offset);
                 }
                 else if (offset === 0) {
-                    this[$placementComplete] = true;
+                    this.placementComplete = true;
                     box.show = false;
                     scene.setShadowIntensity(AR_SHADOW_INTENSITY);
-                    this[$damperRate] = 1;
+                    this.damperRate = 1;
                 }
             }
         }
         box.updateOpacity(delta);
         scene.updateTarget(delta);
-        // This updates the model's position, which the shadow is based on.
-        scene.updateMatrixWorld(true);
         // yaw must be updated last, since this also updates the shadow position.
-        scene.yaw = this[$yawDamper].update(yaw, this[$goalYaw], delta, Math.PI);
+        scene.yaw = this.yawDamper.update(yaw, this.goalYaw, delta, Math.PI);
     }
-    [$tick]() {
-        this[$rafId] = this[$currentSession].requestAnimationFrame((time, frame) => this[$onWebXRFrame](time, frame));
+    tick() {
+        this.rafId = this.currentSession.requestAnimationFrame((time, frame) => this.onWebXRFrame(time, frame));
     }
-    [$onWebXRFrame](time, frame) {
-        this[$frame] = frame;
-        const pose = frame.getViewerPose(this[$refSpace]);
+    /**
+     * Only public to make it testable.
+     */
+    onWebXRFrame(time, frame) {
+        this.frame = frame;
+        const pose = frame.getViewerPose(this.refSpace);
         // TODO: Notify external observers of tick
-        this[$tick]();
-        const scene = this[$presentedScene];
+        this.tick();
+        const scene = this.presentedScene;
         if (pose == null || scene == null) {
             return;
         }
@@ -54423,14 +53073,14 @@ class ARRenderer extends EventDispatcher {
         // as the main viewpoint.
         let isFirstView = true;
         for (const view of pose.views) {
-            this[$updateCamera](view);
+            this.updateCamera(view);
             if (isFirstView) {
-                this[$placeInitially](frame);
-                this[$processInput](frame);
-                const delta = time - this[$lastTick];
-                this[$moveScene](delta);
+                this.placeInitially(frame);
+                this.processInput(frame);
+                const delta = time - this.lastTick;
+                this.moveScene(delta);
                 this.renderer.preRender(scene, time, delta);
-                this[$lastTick] = time;
+                this.lastTick = time;
             }
             // NOTE: Clearing depth caused issues on Samsung devices
             // @see https://github.com/googlecodelabs/ar-with-webxr/issues/8
@@ -54480,7 +53130,7 @@ class Debugger {
                         Texture,
                         Mesh,
                         Scene,
-                        PlaneBufferGeometry,
+                        PlaneBufferGeometry: PlaneGeometry,
                         OrthographicCamera,
                         WebGLRenderTarget
                     }
@@ -54493,164 +53143,6 @@ class Debugger {
     }
     removeScene(scene) {
         self.dispatchEvent(new CustomEvent('model-viewer-scene-removed-debug', { detail: { scene } }));
-    }
-}
-
-const $threeGLTF = Symbol('threeGLTF');
-const $gltf = Symbol('gltf');
-const $gltfElementMap = Symbol('gltfElementMap');
-const $threeObjectMap = Symbol('threeObjectMap');
-const $parallelTraverseThreeScene = Symbol('parallelTraverseThreeScene');
-const $correlateOriginalThreeGLTF = Symbol('correlateOriginalThreeGLTF');
-const $correlateCloneThreeGLTF = Symbol('correlateCloneThreeGLTF');
-/**
- * The Three.js GLTFLoader provides us with an in-memory representation
- * of a glTF in terms of Three.js constructs. It also provides us with a copy
- * of the deserialized glTF without any Three.js decoration, and a mapping of
- * glTF elements to their corresponding Three.js constructs.
- *
- * A CorrelatedSceneGraph exposes a synchronously available mapping of glTF
- * element references to their corresponding Three.js constructs.
- */
-class CorrelatedSceneGraph {
-    constructor(threeGLTF, gltf, threeObjectMap, gltfElementMap) {
-        this[$threeGLTF] = threeGLTF;
-        this[$gltf] = gltf;
-        this[$gltfElementMap] = gltfElementMap;
-        this[$threeObjectMap] = threeObjectMap;
-    }
-    /**
-     * Produce a CorrelatedSceneGraph from a naturally generated Three.js GLTF.
-     * Such GLTFs are produced by Three.js' GLTFLoader, and contain cached
-     * details that expedite the correlation step.
-     *
-     * If a CorrelatedSceneGraph is provided as the second argument, re-correlates
-     * a cloned Three.js GLTF with a clone of the glTF hierarchy used to produce
-     * the upstream Three.js GLTF that the clone was created from. The result
-     * CorrelatedSceneGraph is representative of the cloned hierarchy.
-     */
-    static from(threeGLTF, upstreamCorrelatedSceneGraph) {
-        if (upstreamCorrelatedSceneGraph != null) {
-            return this[$correlateCloneThreeGLTF](threeGLTF, upstreamCorrelatedSceneGraph);
-        }
-        else {
-            return this[$correlateOriginalThreeGLTF](threeGLTF);
-        }
-    }
-    static [$correlateOriginalThreeGLTF](threeGLTF) {
-        const gltf = threeGLTF.parser.json;
-        const { associations } = threeGLTF.parser;
-        const gltfElementMap = new Map();
-        // NOTE: IE11 does not have Map iterator methods
-        associations.forEach((gltfElementReference, threeObject) => {
-            // Note: GLTFLoader creates a "default" material that has no corresponding
-            // glTF element in the case that no materials are specified in the source
-            // glTF. This means that for basic models without any of their own
-            // materials, we might accidentally try to present a configurable glTF
-            // material that doesn't exist. It might be valuable to make this default
-            // material configurable in the future, but for now we ignore it.
-            if (gltfElementReference == null) {
-                return;
-            }
-            const { type, index } = gltfElementReference;
-            const elementArray = gltf[type] || [];
-            const gltfElement = elementArray[index];
-            if (gltfElement == null) {
-                // TODO: Maybe throw here...
-                return;
-            }
-            let threeObjects = gltfElementMap.get(gltfElement);
-            if (threeObjects == null) {
-                threeObjects = new Set();
-                gltfElementMap.set(gltfElement, threeObjects);
-            }
-            threeObjects.add(threeObject);
-        });
-        return new CorrelatedSceneGraph(threeGLTF, gltf, associations, gltfElementMap);
-    }
-    /**
-     * Transfers the association between a raw glTF and a Three.js scene graph
-     * to a clone of the Three.js scene graph, resolved as a new
-     * CorrelatedsceneGraph instance.
-     */
-    static [$correlateCloneThreeGLTF](cloneThreeGLTF, upstreamCorrelatedSceneGraph) {
-        const originalThreeGLTF = upstreamCorrelatedSceneGraph.threeGLTF;
-        const originalGLTF = upstreamCorrelatedSceneGraph.gltf;
-        const cloneGLTF = JSON.parse(JSON.stringify(originalGLTF));
-        const cloneThreeObjectMap = new Map();
-        const cloneGLTFELementMap = new Map();
-        for (let i = 0; i < originalThreeGLTF.scenes.length; i++) {
-            this[$parallelTraverseThreeScene](originalThreeGLTF.scenes[i], cloneThreeGLTF.scenes[i], (object, cloneObject) => {
-                const elementReference = upstreamCorrelatedSceneGraph.threeObjectMap.get(object);
-                if (elementReference != null) {
-                    const { type, index } = elementReference;
-                    const cloneElement = cloneGLTF[type][index];
-                    cloneThreeObjectMap.set(cloneObject, { type, index });
-                    const cloneObjects = cloneGLTFELementMap.get(cloneElement) || new Set();
-                    cloneObjects.add(cloneObject);
-                    cloneGLTFELementMap.set(cloneElement, cloneObjects);
-                }
-            });
-        }
-        return new CorrelatedSceneGraph(cloneThreeGLTF, cloneGLTF, cloneThreeObjectMap, cloneGLTFELementMap);
-    }
-    /**
-     * Traverses two presumably identical Three.js scenes, and invokes a callback
-     * for each Object3D or Material encountered, including the initial scene.
-     * Adapted from
-     * https://github.com/mrdoob/three.js/blob/7c1424c5819ab622a346dd630ee4e6431388021e/examples/jsm/utils/SkeletonUtils.js#L586-L596
-     */
-    static [$parallelTraverseThreeScene](sceneOne, sceneTwo, callback) {
-        const isMesh = (object) => {
-            return object.isMesh;
-        };
-        const traverse = (a, b) => {
-            callback(a, b);
-            if (a.isObject3D) {
-                if (isMesh(a)) {
-                    if (Array.isArray(a.material)) {
-                        for (let i = 0; i < a.material.length; ++i) {
-                            traverse(a.material[i], b.material[i]);
-                        }
-                    }
-                    else {
-                        traverse(a.material, b.material);
-                    }
-                }
-                for (let i = 0; i < a.children.length; ++i) {
-                    traverse(a.children[i], b.children[i]);
-                }
-            }
-        };
-        traverse(sceneOne, sceneTwo);
-    }
-    /**
-     * The source Three.js GLTF result given to us by a Three.js GLTFLoader.
-     */
-    get threeGLTF() {
-        return this[$threeGLTF];
-    }
-    /**
-     * The in-memory deserialized source glTF.
-     */
-    get gltf() {
-        return this[$gltf];
-    }
-    /**
-     * A Map of glTF element references to arrays of corresponding Three.js
-     * object references. Three.js objects are kept in arrays to account for
-     * cases where more than one Three.js object corresponds to a single glTF
-     * element.
-     */
-    get gltfElementMap() {
-        return this[$gltfElementMap];
-    }
-    /**
-     * A map of individual Three.js objects to corresponding elements in the
-     * source glTF.
-     */
-    get threeObjectMap() {
-        return this[$threeObjectMap];
     }
 }
 
@@ -54672,7 +53164,7 @@ var SkeletonUtils = {
 			options.preservePosition = options.preservePosition !== undefined ? options.preservePosition : true;
 			options.preserveHipPosition = options.preserveHipPosition !== undefined ? options.preserveHipPosition : false;
 			options.useTargetMatrix = options.useTargetMatrix !== undefined ? options.useTargetMatrix : false;
-			options.hip = options.hip !== undefined ? options.hip : "hip";
+			options.hip = options.hip !== undefined ? options.hip : 'hip';
 			options.names = options.names || {};
 
 			var sourceBones = source.isObject3D ? source.skeleton.bones : this.getBones( source ),
@@ -54768,7 +53260,7 @@ var SkeletonUtils = {
 
 					} else {
 
-						relativeMatrix.getInverse( target.matrixWorld );
+						relativeMatrix.copy( target.matrixWorld ).invert();
 						relativeMatrix.multiply( boneTo.matrixWorld );
 
 					}
@@ -54785,7 +53277,7 @@ var SkeletonUtils = {
 					if ( target.isObject3D ) {
 
 						var boneIndex = bones.indexOf( bone ),
-							wBindMatrix = bindBones ? bindBones[ boneIndex ] : bindBoneMatrix.getInverse( target.skeleton.boneInverses[ boneIndex ] );
+							wBindMatrix = bindBones ? bindBones[ boneIndex ] : bindBoneMatrix.copy( target.skeleton.boneInverses[ boneIndex ] ).invert();
 
 						globalMatrix.multiply( wBindMatrix );
 
@@ -54797,7 +53289,7 @@ var SkeletonUtils = {
 
 				if ( bone.parent && bone.parent.isBone ) {
 
-					bone.matrix.getInverse( bone.parent.matrixWorld );
+					bone.matrix.copy( bone.parent.matrixWorld ).invert();
 					bone.matrix.multiply( globalMatrix );
 
 				} else {
@@ -54953,7 +53445,7 @@ var SkeletonUtils = {
 				if ( boneData.pos ) {
 
 					convertedTracks.push( new VectorKeyframeTrack(
-						".bones[" + boneData.bone.name + "].position",
+						'.bones[' + boneData.bone.name + '].position',
 						boneData.pos.times,
 						boneData.pos.values
 					) );
@@ -54961,7 +53453,7 @@ var SkeletonUtils = {
 				}
 
 				convertedTracks.push( new QuaternionKeyframeTrack(
-					".bones[" + boneData.bone.name + "].quaternion",
+					'.bones[' + boneData.bone.name + '].quaternion',
 					boneData.quat.times,
 					boneData.quat.values
 				) );
@@ -54997,7 +53489,7 @@ var SkeletonUtils = {
 		return function ( target, source, options ) {
 
 			options = options || {};
-			options.hip = options.hip !== undefined ? options.hip : "hip";
+			options.hip = options.hip !== undefined ? options.hip : 'hip';
 			options.names = options.names || {};
 
 			if ( ! source.isObject3D ) {
@@ -55373,6 +53865,207 @@ const alphaChunk = /* glsl */ `
 #endif
 `;
 
+const $threeGLTF = Symbol('threeGLTF');
+const $gltf = Symbol('gltf');
+const $gltfElementMap = Symbol('gltfElementMap');
+const $threeObjectMap = Symbol('threeObjectMap');
+const $parallelTraverseThreeScene = Symbol('parallelTraverseThreeScene');
+const $correlateOriginalThreeGLTF = Symbol('correlateOriginalThreeGLTF');
+const $correlateCloneThreeGLTF = Symbol('correlateCloneThreeGLTF');
+/**
+ * The Three.js GLTFLoader provides us with an in-memory representation
+ * of a glTF in terms of Three.js constructs. It also provides us with a copy
+ * of the deserialized glTF without any Three.js decoration, and a mapping of
+ * glTF elements to their corresponding Three.js constructs.
+ *
+ * A CorrelatedSceneGraph exposes a synchronously available mapping of glTF
+ * element references to their corresponding Three.js constructs.
+ */
+class CorrelatedSceneGraph {
+    constructor(threeGLTF, gltf, threeObjectMap, gltfElementMap) {
+        this[$threeGLTF] = threeGLTF;
+        this[$gltf] = gltf;
+        this[$gltfElementMap] = gltfElementMap;
+        this[$threeObjectMap] = threeObjectMap;
+    }
+    /**
+     * Produce a CorrelatedSceneGraph from a naturally generated Three.js GLTF.
+     * Such GLTFs are produced by Three.js' GLTFLoader, and contain cached
+     * details that expedite the correlation step.
+     *
+     * If a CorrelatedSceneGraph is provided as the second argument, re-correlates
+     * a cloned Three.js GLTF with a clone of the glTF hierarchy used to produce
+     * the upstream Three.js GLTF that the clone was created from. The result
+     * CorrelatedSceneGraph is representative of the cloned hierarchy.
+     */
+    static from(threeGLTF, upstreamCorrelatedSceneGraph) {
+        if (upstreamCorrelatedSceneGraph != null) {
+            return this[$correlateCloneThreeGLTF](threeGLTF, upstreamCorrelatedSceneGraph);
+        }
+        else {
+            return this[$correlateOriginalThreeGLTF](threeGLTF);
+        }
+    }
+    static [$correlateOriginalThreeGLTF](threeGLTF) {
+        const gltf = threeGLTF.parser.json;
+        const { associations } = threeGLTF.parser;
+        const gltfElementMap = new Map();
+        const defaultMaterial = { name: 'Default' };
+        const defaultReference = { type: 'materials', index: -1 };
+        // NOTE: IE11 does not have Map iterator methods
+        associations.forEach((gltfElementReference, threeObject) => {
+            // Note: GLTFLoader creates a "default" material that has no corresponding
+            // glTF element in the case that no materials are specified in the source
+            // glTF. In this case we append a default material to allow this to be
+            // operated upon.
+            if (gltfElementReference == null) {
+                if (defaultReference.index < 0) {
+                    if (gltf.materials == null) {
+                        gltf.materials = [];
+                    }
+                    defaultReference.index = gltf.materials.length;
+                    gltf.materials.push(defaultMaterial);
+                }
+                gltfElementReference = defaultReference;
+            }
+            const { type, index } = gltfElementReference;
+            const elementArray = gltf[type] || [];
+            const gltfElement = elementArray[index];
+            if (gltfElement == null) {
+                // TODO: Maybe throw here...
+                return;
+            }
+            let threeObjects = gltfElementMap.get(gltfElement);
+            if (threeObjects == null) {
+                threeObjects = new Set();
+                gltfElementMap.set(gltfElement, threeObjects);
+            }
+            threeObjects.add(threeObject);
+        });
+        return new CorrelatedSceneGraph(threeGLTF, gltf, associations, gltfElementMap);
+    }
+    /**
+     * Transfers the association between a raw glTF and a Three.js scene graph
+     * to a clone of the Three.js scene graph, resolved as a new
+     * CorrelatedsceneGraph instance.
+     */
+    static [$correlateCloneThreeGLTF](cloneThreeGLTF, upstreamCorrelatedSceneGraph) {
+        const originalThreeGLTF = upstreamCorrelatedSceneGraph.threeGLTF;
+        const originalGLTF = upstreamCorrelatedSceneGraph.gltf;
+        const cloneGLTF = JSON.parse(JSON.stringify(originalGLTF));
+        const cloneThreeObjectMap = new Map();
+        const cloneGLTFELementMap = new Map();
+        for (let i = 0; i < originalThreeGLTF.scenes.length; i++) {
+            this[$parallelTraverseThreeScene](originalThreeGLTF.scenes[i], cloneThreeGLTF.scenes[i], (object, cloneObject) => {
+                const elementReference = upstreamCorrelatedSceneGraph.threeObjectMap.get(object);
+                if (elementReference != null) {
+                    const { type, index } = elementReference;
+                    const cloneElement = cloneGLTF[type][index];
+                    cloneThreeObjectMap.set(cloneObject, { type, index });
+                    const cloneObjects = cloneGLTFELementMap.get(cloneElement) || new Set();
+                    cloneObjects.add(cloneObject);
+                    cloneGLTFELementMap.set(cloneElement, cloneObjects);
+                }
+            });
+        }
+        return new CorrelatedSceneGraph(cloneThreeGLTF, cloneGLTF, cloneThreeObjectMap, cloneGLTFELementMap);
+    }
+    /**
+     * Traverses two presumably identical Three.js scenes, and invokes a callback
+     * for each Object3D or Material encountered, including the initial scene.
+     * Adapted from
+     * https://github.com/mrdoob/three.js/blob/7c1424c5819ab622a346dd630ee4e6431388021e/examples/jsm/utils/SkeletonUtils.js#L586-L596
+     */
+    static [$parallelTraverseThreeScene](sceneOne, sceneTwo, callback) {
+        const isMesh = (object) => {
+            return object.isMesh;
+        };
+        const traverse = (a, b) => {
+            callback(a, b);
+            if (a.isObject3D) {
+                if (isMesh(a)) {
+                    if (Array.isArray(a.material)) {
+                        for (let i = 0; i < a.material.length; ++i) {
+                            traverse(a.material[i], b.material[i]);
+                        }
+                    }
+                    else {
+                        traverse(a.material, b.material);
+                    }
+                }
+                for (let i = 0; i < a.children.length; ++i) {
+                    traverse(a.children[i], b.children[i]);
+                }
+            }
+        };
+        traverse(sceneOne, sceneTwo);
+    }
+    /**
+     * The source Three.js GLTF result given to us by a Three.js GLTFLoader.
+     */
+    get threeGLTF() {
+        return this[$threeGLTF];
+    }
+    /**
+     * The in-memory deserialized source glTF.
+     */
+    get gltf() {
+        return this[$gltf];
+    }
+    /**
+     * A Map of glTF element references to arrays of corresponding Three.js
+     * object references. Three.js objects are kept in arrays to account for
+     * cases where more than one Three.js object corresponds to a single glTF
+     * element.
+     */
+    get gltfElementMap() {
+        return this[$gltfElementMap];
+    }
+    /**
+     * A map of individual Three.js objects to corresponding elements in the
+     * source glTF.
+     */
+    get threeObjectMap() {
+        return this[$threeObjectMap];
+    }
+    loadVariant(variantIndex, onUpdate = () => { }) {
+        const updatedMaterials = new Set();
+        this.threeGLTF.scene.traverse(async (object) => {
+            const { gltfExtensions } = object.userData;
+            if (!object.isMesh || gltfExtensions == null) {
+                return;
+            }
+            const meshVariantData = gltfExtensions['KHR_materials_variants'];
+            if (meshVariantData == null) {
+                return;
+            }
+            let materialIndex = -1;
+            for (const mapping of meshVariantData.mappings) {
+                if (mapping.variants.indexOf(variantIndex) >= 0) {
+                    materialIndex = mapping.material;
+                    break;
+                }
+            }
+            if (materialIndex < 0) {
+                return;
+            }
+            const material = await this.threeGLTF.parser.getDependency('material', materialIndex);
+            updatedMaterials.add(materialIndex);
+            object.material = material;
+            this.threeGLTF.parser.assignFinalMaterial(object);
+            onUpdate();
+            const gltfElement = this.gltf.materials[materialIndex];
+            let threeObjects = this.gltfElementMap.get(gltfElement);
+            if (threeObjects == null) {
+                threeObjects = new Set();
+                this.gltfElementMap.set(gltfElement, threeObjects);
+            }
+            threeObjects.add(object.material);
+        });
+        return updatedMaterials;
+    }
+}
+
 /* @license
  * Copyright 2020 Google LLC. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the 'License');
@@ -55499,6 +54192,7 @@ class ModelViewerGLTFInstance extends GLTFInstance {
      * shader program.
      */
     [$cloneAndPatchMaterial](material, sourceUUIDToClonedMaterial) {
+        var _a, _b;
         // If we already cloned this material (determined by tracking the UUID of
         // source materials that have been cloned), then return that previously
         // cloned instance:
@@ -55506,6 +54200,50 @@ class ModelViewerGLTFInstance extends GLTFInstance {
             return sourceUUIDToClonedMaterial.get(material.uuid);
         }
         const clone = material.clone();
+        // Clone the textures manually since material cloning is shallow. The
+        // underlying images are still shared.
+        if (material.map != null) {
+            clone.map = material.map.clone();
+            clone.map.needsUpdate = true;
+        }
+        if (material.normalMap != null) {
+            clone.normalMap = material.normalMap.clone();
+            clone.normalMap.needsUpdate = true;
+        }
+        if (material.emissiveMap != null) {
+            clone.emissiveMap = material.emissiveMap.clone();
+            clone.emissiveMap.needsUpdate = true;
+        }
+        if (material.isGLTFSpecularGlossinessMaterial) {
+            if (material.specularMap != null) {
+                clone.specularMap = (_a = material.specularMap) === null || _a === void 0 ? void 0 : _a.clone();
+                clone.specularMap.needsUpdate = true;
+            }
+            if (material.glossinessMap != null) {
+                clone.glossinessMap = (_b = material.glossinessMap) === null || _b === void 0 ? void 0 : _b.clone();
+                clone.glossinessMap.needsUpdate = true;
+            }
+        }
+        else {
+            // ao, roughness and metalness sometimes share a texture.
+            if (material.metalnessMap === material.aoMap) {
+                clone.metalnessMap = clone.aoMap;
+            }
+            else if (material.metalnessMap != null) {
+                clone.metalnessMap = material.metalnessMap.clone();
+                clone.metalnessMap.needsUpdate = true;
+            }
+            if (material.roughnessMap === material.aoMap) {
+                clone.roughnessMap = clone.aoMap;
+            }
+            else if (material.roughnessMap === material.metalnessMap) {
+                clone.roughnessMap = clone.metalnessMap;
+            }
+            else if (material.roughnessMap != null) {
+                clone.roughnessMap = material.roughnessMap.clone();
+                clone.roughnessMap.needsUpdate = true;
+            }
+        }
         // This allows us to patch three's materials, on top of patches already
         // made, for instance GLTFLoader patches SpecularGlossiness materials.
         // Unfortunately, three's program cache differentiates SpecGloss materials
@@ -55571,14 +54309,14 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 				switch ( rgbe_error_code ) {
 
-					case rgbe_read_error: console.error( "RGBELoader Read Error: " + ( msg || '' ) );
+					case rgbe_read_error: console.error( 'THREE.RGBELoader Read Error: ' + ( msg || '' ) );
 						break;
-					case rgbe_write_error: console.error( "RGBELoader Write Error: " + ( msg || '' ) );
+					case rgbe_write_error: console.error( 'THREE.RGBELoader Write Error: ' + ( msg || '' ) );
 						break;
-					case rgbe_format_error: console.error( "RGBELoader Bad File Format: " + ( msg || '' ) );
+					case rgbe_format_error: console.error( 'THREE.RGBELoader Bad File Format: ' + ( msg || '' ) );
 						break;
 					default:
-					case rgbe_memory_error: console.error( "RGBELoader: Error: " + ( msg || '' ) );
+					case rgbe_memory_error: console.error( 'THREE.RGBELoader: Error: ' + ( msg || '' ) );
 
 				}
 
@@ -55599,7 +54337,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 			RGBE_VALID_FORMAT = 2,
 			RGBE_VALID_DIMENSIONS = 4,
 
-			NEWLINE = "\n",
+			NEWLINE = '\n',
 
 			fgets = function ( buffer, lineLimit, consume ) {
 
@@ -55639,7 +54377,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 				var line, match,
 
 					// regexes to parse header info fields
-					magic_token_re = /^#\?(\S+)$/,
+					magic_token_re = /^#\?(\S+)/,
 					gamma_re = /^\s*GAMMA\s*=\s*(\d+(\.\d+)?)\s*$/,
 					exposure_re = /^\s*EXPOSURE\s*=\s*(\d+(\.\d+)?)\s*$/,
 					format_re = /^\s*FORMAT=(\S+)\s*$/,
@@ -55668,30 +54406,30 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 				if ( buffer.pos >= buffer.byteLength || ! ( line = fgets( buffer ) ) ) {
 
-					return rgbe_error( rgbe_read_error, "no header found" );
+					return rgbe_error( rgbe_read_error, 'no header found' );
 
 				}
 
 				/* if you want to require the magic token then uncomment the next line */
 				if ( ! ( match = line.match( magic_token_re ) ) ) {
 
-					return rgbe_error( rgbe_format_error, "bad initial token" );
+					return rgbe_error( rgbe_format_error, 'bad initial token' );
 
 				}
 
 				header.valid |= RGBE_VALID_PROGRAMTYPE;
 				header.programtype = match[ 1 ];
-				header.string += line + "\n";
+				header.string += line + '\n';
 
 				while ( true ) {
 
 					line = fgets( buffer );
 					if ( false === line ) break;
-					header.string += line + "\n";
+					header.string += line + '\n';
 
 					if ( '#' === line.charAt( 0 ) ) {
 
-						header.comments += line + "\n";
+						header.comments += line + '\n';
 						continue; // comment line
 
 					}
@@ -55729,13 +54467,13 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 				if ( ! ( header.valid & RGBE_VALID_FORMAT ) ) {
 
-					return rgbe_error( rgbe_format_error, "missing format specifier" );
+					return rgbe_error( rgbe_format_error, 'missing format specifier' );
 
 				}
 
 				if ( ! ( header.valid & RGBE_VALID_DIMENSIONS ) ) {
 
-					return rgbe_error( rgbe_format_error, "missing image size specifier" );
+					return rgbe_error( rgbe_format_error, 'missing image size specifier' );
 
 				}
 
@@ -55764,7 +54502,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 				if ( scanline_width !== ( ( buffer[ 2 ] << 8 ) | buffer[ 3 ] ) ) {
 
-					return rgbe_error( rgbe_format_error, "wrong scanline width" );
+					return rgbe_error( rgbe_format_error, 'wrong scanline width' );
 
 				}
 
@@ -55772,7 +54510,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 				if ( ! data_rgba.length ) {
 
-					return rgbe_error( rgbe_memory_error, "unable to allocate buffer space" );
+					return rgbe_error( rgbe_memory_error, 'unable to allocate buffer space' );
 
 				}
 
@@ -55796,7 +54534,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 					if ( ( 2 != rgbeStart[ 0 ] ) || ( 2 != rgbeStart[ 1 ] ) || ( ( ( rgbeStart[ 2 ] << 8 ) | rgbeStart[ 3 ] ) != scanline_width ) ) {
 
-						return rgbe_error( rgbe_format_error, "bad rgbe scanline format" );
+						return rgbe_error( rgbe_format_error, 'bad rgbe scanline format' );
 
 					}
 
@@ -55811,7 +54549,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 						if ( ( 0 === count ) || ( ptr + count > ptr_end ) ) {
 
-							return rgbe_error( rgbe_format_error, "bad scanline data" );
+							return rgbe_error( rgbe_format_error, 'bad scanline data' );
 
 						}
 
@@ -55873,71 +54611,16 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 
 		};
 
-		var RGBEByteToRGBHalf = ( function () {
+		var RGBEByteToRGBHalf = function ( sourceArray, sourceOffset, destArray, destOffset ) {
 
-			// Source: http://gamedev.stackexchange.com/questions/17326/conversion-of-a-number-from-single-precision-floating-point-representation-to-a/17410#17410
+			var e = sourceArray[ sourceOffset + 3 ];
+			var scale = Math.pow( 2.0, e - 128.0 ) / 255.0;
 
-			var floatView = new Float32Array( 1 );
-			var int32View = new Int32Array( floatView.buffer );
+			destArray[ destOffset + 0 ] = DataUtils.toHalfFloat( sourceArray[ sourceOffset + 0 ] * scale );
+			destArray[ destOffset + 1 ] = DataUtils.toHalfFloat( sourceArray[ sourceOffset + 1 ] * scale );
+			destArray[ destOffset + 2 ] = DataUtils.toHalfFloat( sourceArray[ sourceOffset + 2 ] * scale );
 
-			/* This method is faster than the OpenEXR implementation (very often
-			 * used, eg. in Ogre), with the additional benefit of rounding, inspired
-			 * by James Tursa?s half-precision code. */
-			function toHalf( val ) {
-
-				floatView[ 0 ] = val;
-				var x = int32View[ 0 ];
-
-				var bits = ( x >> 16 ) & 0x8000; /* Get the sign */
-				var m = ( x >> 12 ) & 0x07ff; /* Keep one extra bit for rounding */
-				var e = ( x >> 23 ) & 0xff; /* Using int is faster here */
-
-				/* If zero, or denormal, or exponent underflows too much for a denormal
-				 * half, return signed zero. */
-				if ( e < 103 ) return bits;
-
-				/* If NaN, return NaN. If Inf or exponent overflow, return Inf. */
-				if ( e > 142 ) {
-
-					bits |= 0x7c00;
-					/* If exponent was 0xff and one mantissa bit was set, it means NaN,
-							 * not Inf, so make sure we set one mantissa bit too. */
-					bits |= ( ( e == 255 ) ? 0 : 1 ) && ( x & 0x007fffff );
-					return bits;
-
-				}
-
-				/* If exponent underflows but not too much, return a denormal */
-				if ( e < 113 ) {
-
-					m |= 0x0800;
-					/* Extra rounding may overflow and set mantissa to 0 and exponent
-					 * to 1, which is OK. */
-					bits |= ( m >> ( 114 - e ) ) + ( ( m >> ( 113 - e ) ) & 1 );
-					return bits;
-
-				}
-
-				bits |= ( ( e - 112 ) << 10 ) | ( m >> 1 );
-				/* Extra rounding. An overflow will set mantissa to 0 and increment
-				 * the exponent, which is OK. */
-				bits += m & 1;
-				return bits;
-
-			}
-
-			return function ( sourceArray, sourceOffset, destArray, destOffset ) {
-
-				var e = sourceArray[ sourceOffset + 3 ];
-				var scale = Math.pow( 2.0, e - 128.0 ) / 255.0;
-
-				destArray[ destOffset + 0 ] = toHalf( sourceArray[ sourceOffset + 0 ] * scale );
-				destArray[ destOffset + 1 ] = toHalf( sourceArray[ sourceOffset + 1 ] * scale );
-				destArray[ destOffset + 2 ] = toHalf( sourceArray[ sourceOffset + 2 ] * scale );
-
-			};
-
-		} )();
+		};
 
 		var byteArray = new Uint8Array( buffer );
 		byteArray.pos = 0;
@@ -56070,7 +54753,7 @@ RGBELoader.prototype = Object.assign( Object.create( DataTextureLoader.prototype
 } );
 
 /* @license
- * Copyright 2019 Google LLC. All Rights Reserved.
+ * Copyright 2021 Google LLC. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -56087,7 +54770,7 @@ class EnvironmentScene extends Scene {
     constructor() {
         super();
         this.position.y = -3.5;
-        const geometry = new BoxBufferGeometry();
+        const geometry = new BoxGeometry();
         geometry.deleteAttribute('uv');
         const roomMaterial = new MeshStandardMaterial({ metalness: 0, side: BackSide });
         const boxMaterial = new MeshStandardMaterial({ metalness: 0 });
@@ -56167,6 +54850,98 @@ class EnvironmentScene extends Scene {
 }
 
 /* @license
+ * Copyright 2021 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+class EnvironmentSceneAlt extends Scene {
+    constructor() {
+        super();
+        this.position.y = -3.5;
+        const geometry = new BoxGeometry();
+        geometry.deleteAttribute('uv');
+        const roomMaterial = new MeshStandardMaterial({ metalness: 0, side: BackSide });
+        const boxMaterial = new MeshStandardMaterial({ metalness: 0 });
+        const mainLight = new PointLight(0xffffff, 500.0, 28, 2);
+        mainLight.position.set(0.5, 16.5, 0.5);
+        this.add(mainLight);
+        const room = new Mesh(geometry, roomMaterial);
+        room.position.set(0.0, 13.2, 0.0);
+        room.scale.set(31.5, 28.5, 31.5);
+        this.add(room);
+        const box1 = new Mesh(geometry, boxMaterial);
+        box1.position.set(-10.906, -1.0, 1.846);
+        box1.rotation.set(0, -0.195, 0);
+        box1.scale.set(2.328, 7.905, 4.651);
+        this.add(box1);
+        const box2 = new Mesh(geometry, boxMaterial);
+        box2.position.set(-5.607, -0.754, -0.758);
+        box2.rotation.set(0, 0.994, 0);
+        box2.scale.set(1.970, 1.534, 3.955);
+        this.add(box2);
+        const box3 = new Mesh(geometry, boxMaterial);
+        box3.position.set(6.167, -0.16, 7.803);
+        box3.rotation.set(0, 0.561, 0);
+        box3.scale.set(3.927, 6.285, 3.687);
+        this.add(box3);
+        const box4 = new Mesh(geometry, boxMaterial);
+        box4.position.set(-2.017, 0.018, 6.124);
+        box4.rotation.set(0, 0.333, 0);
+        box4.scale.set(2.002, 4.566, 2.064);
+        this.add(box4);
+        const box5 = new Mesh(geometry, boxMaterial);
+        box5.position.set(2.291, -0.756, -2.621);
+        box5.rotation.set(0, -0.286, 0);
+        box5.scale.set(1.546, 1.552, 1.496);
+        this.add(box5);
+        const box6 = new Mesh(geometry, boxMaterial);
+        box6.position.set(-2.193, -0.369, -5.547);
+        box6.rotation.set(0, 0.516, 0);
+        box6.scale.set(3.875, 3.487, 2.986);
+        this.add(box6);
+        // -x
+        const light1 = new Mesh(geometry, this.createAreaLightMaterial(18));
+        light1.position.set(-14.0, 9.0, 0.1);
+        light1.scale.set(0.1, 5.0, 5.0);
+        this.add(light1);
+        // +x
+        const light3 = new Mesh(geometry, this.createAreaLightMaterial(18));
+        light3.position.set(14.0, 9.0, 0.1);
+        light3.scale.set(0.1, 5.0, 5.0);
+        this.add(light3);
+        // +z
+        const light4 = new Mesh(geometry, this.createAreaLightMaterial(18));
+        light4.position.set(0.0, 9.0, 14.0);
+        light4.scale.set(5.0, 5.0, 0.1);
+        this.add(light4);
+        // -z
+        const light5 = new Mesh(geometry, this.createAreaLightMaterial(18));
+        light5.position.set(0, 9.0, -14.0);
+        light5.scale.set(5.0, 5.0, 0.1);
+        this.add(light5);
+        // +y
+        const light6 = new Mesh(geometry, this.createAreaLightMaterial(18));
+        light6.position.set(0.0, 20.0, 0.0);
+        light6.scale.set(1.5, 0.1, 1.5);
+        this.add(light6);
+    }
+    createAreaLightMaterial(intensity) {
+        const material = new MeshBasicMaterial();
+        material.color.setScalar(intensity);
+        return material;
+    }
+}
+
+/* @license
  * Copyright 2019 Google LLC. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
@@ -56198,6 +54973,7 @@ class TextureUtils extends EventDispatcher {
     constructor(threeRenderer) {
         super();
         this.generatedEnvironmentMap = null;
+        this.generatedEnvironmentMapAlt = null;
         this.skyboxCache = new Map();
         this.environmentMapCache = new Map();
         this.PMREMGenerator = new PMREMGenerator(threeRenderer);
@@ -56234,9 +55010,14 @@ class TextureUtils extends EventDispatcher {
      * accordingly. `skybox` is a WebGLRenderCubeTarget, and `environmentMap`
      * is a Texture from a WebGLRenderCubeTarget.
      */
-    async generateEnvironmentMapAndSkybox(skyboxUrl = null, environmentMapUrl = null, options = {}) {
+    async generateEnvironmentMapAndSkybox(skyboxUrl = null, environmentMap = null, options = {}) {
         const { progressTracker } = options;
         const updateGenerationProgress = progressTracker != null ? progressTracker.beginActivity() : () => { };
+        const useAltEnvironment = environmentMap === 'neutral';
+        if (useAltEnvironment === true) {
+            environmentMap = null;
+        }
+        const environmentMapUrl = deserializeUrl(environmentMap);
         try {
             let skyboxLoads = Promise.resolve(null);
             let environmentMapLoads;
@@ -56256,7 +55037,9 @@ class TextureUtils extends EventDispatcher {
             }
             else {
                 // Fallback to generating the environment map
-                environmentMapLoads = this.loadGeneratedEnvironmentMap();
+                environmentMapLoads = useAltEnvironment === true ?
+                    this.loadGeneratedEnvironmentMapAlt() :
+                    this.loadGeneratedEnvironmentMap();
             }
             let [environmentMap, skybox] = await Promise.all([environmentMapLoads, skyboxLoads]);
             if (environmentMap == null) {
@@ -56315,6 +55098,20 @@ class TextureUtils extends EventDispatcher {
         }
         return Promise.resolve(this.generatedEnvironmentMap);
     }
+    /**
+     * Loads a dynamically generated environment map, designed to be neutral and
+     * color-preserving. Shows less contrast around the different sides of the
+     * object.
+     */
+    loadGeneratedEnvironmentMapAlt() {
+        if (this.generatedEnvironmentMapAlt == null) {
+            const defaultScene = new EnvironmentSceneAlt;
+            this.generatedEnvironmentMapAlt =
+                this.PMREMGenerator.fromScene(defaultScene, GENERATED_SIGMA);
+            this.addMetadata(this.generatedEnvironmentMapAlt.texture, null);
+        }
+        return Promise.resolve(this.generatedEnvironmentMapAlt);
+    }
     async dispose() {
         const allTargetsLoad = [];
         // NOTE(cdata): We would use for-of iteration on the maps here, but
@@ -56337,6 +55134,10 @@ class TextureUtils extends EventDispatcher {
             this.generatedEnvironmentMap.dispose();
             this.generatedEnvironmentMap = null;
         }
+        if (this.generatedEnvironmentMapAlt != null) {
+            this.generatedEnvironmentMapAlt.dispose();
+            this.generatedEnvironmentMapAlt = null;
+        }
     }
 }
 
@@ -56354,17 +55155,13 @@ class TextureUtils extends EventDispatcher {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$6, _b$4;
 // Between 0 and 1: larger means the average responds faster and is less smooth.
 const DURATION_DECAY = 0.2;
 const LOW_FRAME_DURATION_MS = 18;
 const HIGH_FRAME_DURATION_MS = 26;
 const MAX_AVG_CHANGE_MS = 2;
-const SCALE_STEP = 0.79;
-const DEFAULT_MIN_SCALE = 0.5;
-const $onWebGLContextLost = Symbol('onWebGLContextLost');
-const $webGLContextLostHandler = Symbol('webGLContextLostHandler');
-const $singleton = Symbol('singleton');
+const SCALE_STEPS = [1, 0.79, 0.62, 0.5, 0.4, 0.31, 0.25];
+const DEFAULT_LAST_STEP = 3;
 /**
  * Registers canvases with Canvas2DRenderingContexts and renders them
  * all in the same WebGLRenderingContext, spitting out textures to apply
@@ -56383,19 +55180,21 @@ class Renderer extends EventDispatcher {
         this.width = 0;
         this.height = 0;
         this.dpr = 1;
-        this.minScale = DEFAULT_MIN_SCALE;
         this.debugger = null;
         this.scenes = new Set();
         this.multipleScenesVisible = false;
-        this.scale = 1;
+        this.scaleStep = 0;
+        this.lastStep = DEFAULT_LAST_STEP;
         this.avgFrameDuration = (HIGH_FRAME_DURATION_MS + LOW_FRAME_DURATION_MS) / 2;
-        this[_b$4] = (event) => this[$onWebGLContextLost](event);
+        this.onWebGLContextLost = (event) => {
+            this.dispatchEvent({ type: 'contextlost', sourceEvent: event });
+        };
         this.dpr = resolveDpr();
         this.canvasElement = document.createElement('canvas');
         this.canvasElement.id = 'webgl-canvas';
         this.canvas3D = 
             this.canvasElement;
-        this.canvas3D.addEventListener('webglcontextlost', this[$webGLContextLostHandler]);
+        this.canvas3D.addEventListener('webglcontextlost', this.onWebGLContextLost);
         try {
             this.threeRenderer = new WebGL1Renderer({
                 canvas: this.canvas3D,
@@ -56406,7 +55205,6 @@ class Renderer extends EventDispatcher {
             });
             this.threeRenderer.autoClear = true;
             this.threeRenderer.outputEncoding = GammaEncoding;
-            this.threeRenderer.gammaFactor = 2.2;
             this.threeRenderer.physicallyCorrectLights = true;
             this.threeRenderer.setPixelRatio(1); // handle pixel ratio externally
             this.threeRenderer.shadowMap.enabled = true;
@@ -56431,17 +55229,27 @@ class Renderer extends EventDispatcher {
         this.avgFrameDuration = 0;
     }
     static get singleton() {
-        return this[$singleton];
+        return this._singleton;
     }
     static resetSingleton() {
-        this[$singleton].dispose();
-        this[$singleton] = new Renderer({ debug: isDebugMode() });
+        this._singleton.dispose();
+        this._singleton = new Renderer({ debug: isDebugMode() });
     }
     get canRender() {
         return this.threeRenderer != null;
     }
     get scaleFactor() {
-        return this.scale;
+        return SCALE_STEPS[this.scaleStep];
+    }
+    set minScale(scale) {
+        let i = 1;
+        while (i < SCALE_STEPS.length) {
+            if (SCALE_STEPS[i] < scale) {
+                break;
+            }
+            ++i;
+        }
+        this.lastStep = i - 1;
     }
     /**
      * Updates the renderer's size based on the largest scene and any changes to
@@ -56475,8 +55283,9 @@ class Renderer extends EventDispatcher {
             this.threeRenderer.setSize(width * dpr, height * dpr, false);
         }
         // Expand the canvas size to make up for shrinking the viewport.
-        const widthCSS = width / this.scale;
-        const heightCSS = height / this.scale;
+        const scale = this.scaleFactor;
+        const widthCSS = width / scale;
+        const heightCSS = height / scale;
         // The canvas element must by styled outside of three due to the offscreen
         // canvas not being directly stylable.
         this.canvasElement.style.width = `${widthCSS}px`;
@@ -56494,20 +55303,18 @@ class Renderer extends EventDispatcher {
         }
     }
     updateRendererScale() {
-        let { scale } = this;
+        const scaleStep = this.scaleStep;
         if (this.avgFrameDuration > HIGH_FRAME_DURATION_MS &&
-            scale > this.minScale) {
-            scale *= SCALE_STEP;
+            this.scaleStep < this.lastStep) {
+            ++this.scaleStep;
         }
-        else if (this.avgFrameDuration < LOW_FRAME_DURATION_MS && scale < 1) {
-            scale /= SCALE_STEP;
-            scale = Math.min(scale, 1);
+        else if (this.avgFrameDuration < LOW_FRAME_DURATION_MS && this.scaleStep > 0) {
+            --this.scaleStep;
         }
-        scale = Math.max(scale, this.minScale);
-        if (scale == this.scale) {
+        if (scaleStep == this.scaleStep) {
             return;
         }
-        this.scale = scale;
+        const scale = this.scaleFactor;
         this.avgFrameDuration =
             (HIGH_FRAME_DURATION_MS + LOW_FRAME_DURATION_MS) / 2;
         const width = this.width / scale;
@@ -56524,10 +55331,11 @@ class Renderer extends EventDispatcher {
     registerScene(scene) {
         this.scenes.add(scene);
         const { canvas } = scene;
+        const scale = this.scaleFactor;
         canvas.width = Math.round(this.width * this.dpr);
         canvas.height = Math.round(this.height * this.dpr);
-        canvas.style.width = `${this.width / this.scale}px`;
-        canvas.style.height = `${this.height / this.scale}px`;
+        canvas.style.width = `${this.width / scale}px`;
+        canvas.style.height = `${this.height / scale}px`;
         if (this.multipleScenesVisible) {
             canvas.classList.add('show');
         }
@@ -56618,11 +55426,11 @@ class Renderer extends EventDispatcher {
      * the time that has passed since the last rendered frame.
      */
     preRender(scene, t, delta) {
-        const { element, exposure, model } = scene;
-        element[$tick$1](t, delta);
+        const { element, exposure } = scene;
+        element[$tick](t, delta);
         const exposureIsNumber = typeof exposure === 'number' && !self.isNaN(exposure);
         this.threeRenderer.toneMappingExposure = exposureIsNumber ? exposure : 1.0;
-        if (model.updateShadow()) {
+        if (scene.isShadowDirty()) {
             this.threeRenderer.shadowMap.needsUpdate = true;
         }
     }
@@ -56636,7 +55444,7 @@ class Renderer extends EventDispatcher {
         this.selectCanvas();
         this.updateRendererSize();
         this.updateRendererScale();
-        const { dpr, scale } = this;
+        const { dpr, scaleFactor } = this;
         for (const scene of this.orderedScenes()) {
             if (!scene.element[$sceneIsReady]()) {
                 continue;
@@ -56646,6 +55454,7 @@ class Renderer extends EventDispatcher {
                 continue;
             }
             scene.isDirty = false;
+            ++scene.renderCount;
             if (!scene.element.modelIsVisible && !this.multipleScenesVisible) {
                 // Here we are pre-rendering on the visible canvas, so we must mark the
                 // visible scene dirty to ensure it overwrites us.
@@ -56657,8 +55466,8 @@ class Renderer extends EventDispatcher {
             }
             // We avoid using the Three.js PixelRatio and handle it ourselves here so
             // that we can do proper rounding and avoid white boundary pixels.
-            const width = Math.min(Math.ceil(scene.width * scale * dpr), this.canvas3D.width);
-            const height = Math.min(Math.ceil(scene.height * scale * dpr), this.canvas3D.height);
+            const width = Math.min(Math.ceil(scene.width * scaleFactor * dpr), this.canvas3D.width);
+            const height = Math.min(Math.ceil(scene.height * scaleFactor * dpr), this.canvas3D.height);
             // Need to set the render target in order to prevent
             // clearing the depth from a different buffer
             this.threeRenderer.setRenderTarget(null);
@@ -56686,13 +55495,10 @@ class Renderer extends EventDispatcher {
         this.textureUtils = null;
         this.threeRenderer = null;
         this.scenes.clear();
-        this.canvas3D.removeEventListener('webglcontextlost', this[$webGLContextLostHandler]);
-    }
-    [(_a$6 = $singleton, _b$4 = $webGLContextLostHandler, $onWebGLContextLost)](event) {
-        this.dispatchEvent({ type: 'contextlost', sourceEvent: event });
+        this.canvas3D.removeEventListener('webglcontextlost', this.onWebGLContextLost);
     }
 }
-Renderer[_a$6] = new Renderer({ debug: isDebugMode() });
+Renderer._singleton = new Renderer({ debug: isDebugMode() });
 
 /* @license
  * Copyright 2019 Google LLC. All Rights Reserved.
@@ -56750,7 +55556,7 @@ const dataUrlToBlob = async (base64DataUrl) => {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$7, _b$5;
+var _a$4, _b$2;
 const $ongoingActivities = Symbol('ongoingActivities');
 const $announceTotalProgress = Symbol('announceTotalProgress');
 const $eventDelegate = Symbol('eventDelegate');
@@ -56780,14 +55586,14 @@ class ProgressTracker {
         // NOTE(cdata): This eventDelegate hack is a quick trick to let us get the
         // EventTarget interface without implementing or requiring a full polyfill. We
         // should remove this once EventTarget is inheritable everywhere.
-        this[_a$7] = document.createDocumentFragment();
+        this[_a$4] = document.createDocumentFragment();
         // NOTE(cdata): We declare each of these methods independently here so that we
         // can inherit the correct types from EventTarget's interface. Maybe there is
         // a better way to do this dynamically so that we don't repeat ourselves?
         this.addEventListener = (...args) => this[$eventDelegate].addEventListener(...args);
         this.removeEventListener = (...args) => this[$eventDelegate].removeEventListener(...args);
         this.dispatchEvent = (...args) => this[$eventDelegate].dispatchEvent(...args);
-        this[_b$5] = new Set();
+        this[_b$2] = new Set();
     }
     /**
      * The total number of activities currently being tracked.
@@ -56828,7 +55634,7 @@ class ProgressTracker {
             return activity.progress;
         };
     }
-    [(_a$7 = $eventDelegate, _b$5 = $ongoingActivities, $announceTotalProgress)]() {
+    [(_a$4 = $eventDelegate, _b$2 = $ongoingActivities, $announceTotalProgress)]() {
         let totalProgress = 0;
         let statusCount = 0;
         let completedActivities = 0;
@@ -56868,7 +55674,7 @@ var __decorate = (undefined && undefined.__decorate) || function (decorators, ta
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var _a$8, _b$6, _c$1, _d$1, _e$1, _f$1, _g$1, _h$1, _j$1, _k$1;
+var _a$5, _b$3, _c, _d, _e, _f, _g, _h, _j, _k;
 const CLEAR_MODEL_TIMEOUT_MS = 1000;
 const FALLBACK_SIZE_UPDATE_THRESHOLD_MS = 50;
 const ANNOUNCE_MODEL_VISIBILITY_DEBOUNCE_THRESHOLD = 0;
@@ -56883,7 +55689,6 @@ const $resizeObserver = Symbol('resizeObserver');
 const $intersectionObserver = Symbol('intersectionObserver');
 const $clearModelTimeout = Symbol('clearModelTimeout');
 const $onContextLost = Symbol('onContextLost');
-const $contextLostHandler = Symbol('contextLostHandler');
 const $loaded = Symbol('loaded');
 const $updateSize = Symbol('updateSize');
 const $isElementInViewport = Symbol('isElementInViewport');
@@ -56897,7 +55702,7 @@ const $userInputElement = Symbol('input');
 const $canvas = Symbol('canvas');
 const $scene = Symbol('scene');
 const $needsRender = Symbol('needsRender');
-const $tick$1 = Symbol('tick');
+const $tick = Symbol('tick');
 const $onModelLoad = Symbol('onModelLoad');
 const $onResize = Symbol('onResize');
 const $renderer = Symbol('renderer');
@@ -56928,24 +55733,26 @@ class ModelViewerElementBase extends UpdatingElement {
         super();
         this.alt = null;
         this.src = null;
-        this[_a$8] = false;
-        this[_b$6] = false;
-        this[_c$1] = 0;
-        this[_d$1] = null;
-        this[_e$1] = debounce(() => {
+        this[_a$5] = false;
+        this[_b$3] = false;
+        this[_c] = 0;
+        this[_d] = null;
+        this[_e] = debounce(() => {
             const boundingRect = this.getBoundingClientRect();
             this[$updateSize](boundingRect);
         }, FALLBACK_SIZE_UPDATE_THRESHOLD_MS);
-        this[_f$1] = debounce((oldVisibility) => {
+        this[_f] = debounce((oldVisibility) => {
             const newVisibility = this.modelIsVisible;
             if (newVisibility !== oldVisibility) {
                 this.dispatchEvent(new CustomEvent('model-visibility', { detail: { visible: newVisibility } }));
             }
         }, ANNOUNCE_MODEL_VISIBILITY_DEBOUNCE_THRESHOLD);
-        this[_g$1] = null;
-        this[_h$1] = null;
-        this[_j$1] = new ProgressTracker();
-        this[_k$1] = (event) => this[$onContextLost](event);
+        this[_g] = null;
+        this[_h] = null;
+        this[_j] = new ProgressTracker();
+        this[_k] = (event) => {
+            this.dispatchEvent(new CustomEvent('error', { detail: { type: 'webglcontextlost', sourceError: event.sourceEvent } }));
+        };
         // NOTE(cdata): It is *very important* to access this template first so that
         // the ShadyCSS template preparation steps happen before element styling in
         // IE11:
@@ -56980,9 +55787,11 @@ class ModelViewerElementBase extends UpdatingElement {
         // Create the underlying ModelScene.
         this[$scene] =
             new ModelScene({ canvas: this[$canvas], element: this, width, height });
-        this[$scene].addEventListener('model-load', (event) => {
+        this[$scene].addEventListener('model-load', async (event) => {
             this[$markLoaded]();
             this[$onModelLoad]();
+            // Give loading async tasks a chance to complete.
+            await timePasses();
             this.dispatchEvent(new CustomEvent('load', { detail: { url: event.url } }));
         });
         // Update initial size on microtask timing so that subclasses have a
@@ -57060,9 +55869,9 @@ class ModelViewerElementBase extends UpdatingElement {
             console.warn('<model-viewer> minimumRenderScale has been clamped to a maximum value of 1.');
         }
         if (value <= 0) {
-            console.warn('<model-viewer> minimumRenderScale has been clamped to a minimum value of 0. This could result in single-pixel renders on some devices; consider increasing.');
+            console.warn('<model-viewer> minimumRenderScale has been clamped to a minimum value of 0.25.');
         }
-        Renderer.singleton.minScale = Math.max(0, Math.min(1, value));
+        Renderer.singleton.minScale = value;
     }
     /** @export */
     static get minimumRenderScale() {
@@ -57072,7 +55881,7 @@ class ModelViewerElementBase extends UpdatingElement {
     get loaded() {
         return this[$getLoaded]();
     }
-    get [(_a$8 = $isElementInViewport, _b$6 = $loaded, _c$1 = $loadedTime, _d$1 = $clearModelTimeout, _e$1 = $fallbackResizeHandler, _f$1 = $announceModelVisibility, _g$1 = $resizeObserver, _h$1 = $intersectionObserver, _j$1 = $progressTracker, _k$1 = $contextLostHandler, $renderer)]() {
+    get [(_a$5 = $isElementInViewport, _b$3 = $loaded, _c = $loadedTime, _d = $clearModelTimeout, _e = $fallbackResizeHandler, _f = $announceModelVisibility, _g = $resizeObserver, _h = $intersectionObserver, _j = $progressTracker, $renderer)]() {
         return Renderer.singleton;
     }
     /** @export */
@@ -57091,7 +55900,7 @@ class ModelViewerElementBase extends UpdatingElement {
             this[$intersectionObserver].observe(this);
         }
         const renderer = this[$renderer];
-        renderer.addEventListener('contextlost', this[$contextLostHandler]);
+        renderer.addEventListener('contextlost', this[$onContextLost]);
         renderer.registerScene(this[$scene]);
         if (this[$clearModelTimeout] != null) {
             self.clearTimeout(this[$clearModelTimeout]);
@@ -57113,10 +55922,10 @@ class ModelViewerElementBase extends UpdatingElement {
             this[$intersectionObserver].unobserve(this);
         }
         const renderer = this[$renderer];
-        renderer.removeEventListener('contextlost', this[$contextLostHandler]);
+        renderer.removeEventListener('contextlost', this[$onContextLost]);
         renderer.unregisterScene(this[$scene]);
         this[$clearModelTimeout] = self.setTimeout(() => {
-            this[$scene].model.clear();
+            this[$scene].reset();
         }, CLEAR_MODEL_TIMEOUT_MS);
     }
     updated(changedProperties) {
@@ -57125,11 +55934,17 @@ class ModelViewerElementBase extends UpdatingElement {
         // of a microtask, LitElement/UpdatingElement will notify of a change even
         // though the value has effectively not changed, so we need to check to make
         // sure that the value has actually changed before changing the loaded flag.
-        if (changedProperties.has('src') &&
-            (this.src == null || this.src !== this[$scene].model.url)) {
-            this[$loaded] = false;
-            this[$loadedTime] = 0;
-            this[$updateSource]();
+        if (changedProperties.has('src')) {
+            if (this.src == null) {
+                this[$loaded] = false;
+                this[$loadedTime] = 0;
+                this[$scene].reset();
+            }
+            else if (this.src !== this[$scene].url) {
+                this[$loaded] = false;
+                this[$loadedTime] = 0;
+                this[$updateSource]();
+            }
         }
         if (changedProperties.has('alt')) {
             const ariaLabel = this.alt == null ? this[$defaultAriaLabel] : this.alt;
@@ -57147,21 +55962,21 @@ class ModelViewerElementBase extends UpdatingElement {
         const mimeType = options ? options.mimeType : undefined;
         const qualityArgument = options ? options.qualityArgument : undefined;
         const idealAspect = options ? options.idealAspect : undefined;
-        const { width, height, model, aspect } = this[$scene];
+        const { width, height, fieldOfViewAspect, aspect } = this[$scene];
         const { dpr, scaleFactor } = this[$renderer];
         let outputWidth = width * scaleFactor * dpr;
         let outputHeight = height * scaleFactor * dpr;
         let offsetX = 0;
         let offsetY = 0;
         if (idealAspect === true) {
-            if (model.fieldOfViewAspect > aspect) {
+            if (fieldOfViewAspect > aspect) {
                 const oldHeight = outputHeight;
-                outputHeight = Math.round(outputWidth / model.fieldOfViewAspect);
+                outputHeight = Math.round(outputWidth / fieldOfViewAspect);
                 offsetY = (oldHeight - outputHeight) / 2;
             }
             else {
                 const oldWidth = outputWidth;
-                outputWidth = Math.round(outputHeight * model.fieldOfViewAspect);
+                outputWidth = Math.round(outputHeight * fieldOfViewAspect);
                 offsetX = (oldWidth - outputWidth) / 2;
             }
         }
@@ -57228,7 +56043,7 @@ class ModelViewerElementBase extends UpdatingElement {
         this[$container].style.height = `${height}px`;
         this[$onResize]({ width: parseFloat(width), height: parseFloat(height) });
     }
-    [$tick$1](_time, _delta) {
+    [$tick](_time, _delta) {
     }
     [$markLoaded]() {
         if (this[$loaded]) {
@@ -57245,22 +56060,19 @@ class ModelViewerElementBase extends UpdatingElement {
     [$onResize](e) {
         this[$scene].setSize(e.width, e.height);
     }
-    [$onContextLost](event) {
-        this.dispatchEvent(new CustomEvent('error', { detail: { type: 'webglcontextlost', sourceError: event.sourceEvent } }));
-    }
     /**
      * Parses the element for an appropriate source URL and
      * sets the views to use the new model based off of the `preload`
      * attribute.
      */
-    async [$updateSource]() {
+    async [(_k = $onContextLost, $updateSource)]() {
         if (this.loaded || !this[$shouldAttemptPreload]()) {
             return;
         }
         const updateSourceProgress = this[$progressTracker].beginActivity();
         const source = this.src;
         try {
-            await this[$scene].setModelSource(source, (progress) => updateSourceProgress(progress * 0.8));
+            await this[$scene].setSource(source, (progress) => updateSourceProgress(progress * 0.8));
             const detail = { url: source };
             this.dispatchEvent(new CustomEvent('preload', { detail }));
         }
@@ -57322,18 +56134,21 @@ const AnimationMixin = (ModelViewerElement) => {
          */
         get availableAnimations() {
             if (this.loaded) {
-                return this[$scene].model.animationNames;
+                return this[$scene].animationNames;
             }
             return [];
+        }
+        get duration() {
+            return this[$scene].duration;
         }
         get paused() {
             return this[$paused];
         }
         get currentTime() {
-            return this[$scene].model.animationTime;
+            return this[$scene].animationTime;
         }
         set currentTime(value) {
-            this[$scene].model.animationTime = value;
+            this[$scene].animationTime = value;
             this[$renderer].threeRenderer.shadowMap.needsUpdate = true;
             this[$needsRender]();
         }
@@ -57349,7 +56164,7 @@ const AnimationMixin = (ModelViewerElement) => {
             if (this[$paused] && this.availableAnimations.length > 0) {
                 this[$paused] = false;
                 this[$renderer].threeRenderer.shadowMap.autoUpdate = true;
-                if (!this[$scene].model.hasActiveAnimation) {
+                if (!this[$scene].hasActiveAnimation) {
                     this[$changeAnimation]();
                 }
                 this.dispatchEvent(new CustomEvent('play'));
@@ -57363,13 +56178,12 @@ const AnimationMixin = (ModelViewerElement) => {
                 this.play();
             }
         }
-        [$tick$1](_time, delta) {
-            super[$tick$1](_time, delta);
+        [$tick](_time, delta) {
+            super[$tick](_time, delta);
             if (this[$paused] || !this[$hasTransitioned]()) {
                 return;
             }
-            const { model } = this[$scene];
-            model.updateAnimation(delta / MILLISECONDS_PER_SECOND);
+            this[$scene].updateAnimation(delta / MILLISECONDS_PER_SECOND);
             this[$needsRender]();
         }
         updated(changedProperties) {
@@ -57386,16 +56200,15 @@ const AnimationMixin = (ModelViewerElement) => {
             // the current one (if any is playing). Otherwise, we might lose
             // the reference to the scene root and running actions start to
             // throw exceptions and/or behave in unexpected ways:
-            this[$scene].model.stopAnimation();
+            this[$scene].stopAnimation();
             return super[$updateSource]();
         }
         [$changeAnimation]() {
-            const { model } = this[$scene];
-            model.playAnimation(this.animationName, this.animationCrossfadeDuration / MILLISECONDS_PER_SECOND);
+            this[$scene].playAnimation(this.animationName, this.animationCrossfadeDuration / MILLISECONDS_PER_SECOND);
             // If we are currently paused, we need to force a render so that
-            // the model updates to the first frame of the new animation
+            // the scene updates to the first frame of the new animation
             if (this[$paused]) {
-                model.updateAnimation(0);
+                this[$scene].updateAnimation(0);
                 this[$needsRender]();
             }
         }
@@ -57512,6 +56325,7 @@ const AnnotationMixin = (ModelViewerElement) => {
             }
             hotspot.updatePosition(config.position);
             hotspot.updateNormal(config.normal);
+            this[$needsRender]();
         }
         /**
          * This method returns the model position and normal of the point on the
@@ -57522,7 +56336,7 @@ const AnnotationMixin = (ModelViewerElement) => {
          */
         positionAndNormalFromPoint(pixelX, pixelY) {
             const scene = this[$scene];
-            const { width, height, model } = scene;
+            const { width, height, target } = scene;
             pixelPosition.set(pixelX / width, pixelY / height)
                 .multiplyScalar(2)
                 .subScalar(1);
@@ -57531,18 +56345,18 @@ const AnnotationMixin = (ModelViewerElement) => {
             if (hit == null) {
                 return null;
             }
-            worldToModel.getInverse(model.matrixWorld);
+            worldToModel.copy(target.matrixWorld).invert();
             const position = toVector3D(hit.position.applyMatrix4(worldToModel));
             worldToModelNormal.getNormalMatrix(worldToModel);
             const normal = toVector3D(hit.normal.applyNormalMatrix(worldToModelNormal));
             return { position: position, normal: normal };
         }
-        [(_a = $annotationRenderer, _b = $hotspotMap, _c = $mutationCallback, _d = $observer, $tick$1)](time, delta) {
-            super[$tick$1](time, delta);
+        [(_a = $annotationRenderer, _b = $hotspotMap, _c = $mutationCallback, _d = $observer, $tick)](time, delta) {
+            super[$tick](time, delta);
             const scene = this[$scene];
             const camera = scene.getCamera();
             if (scene.isDirty) {
-                scene.model.updateHotspots(camera.position);
+                scene.updateHotspots(camera.position);
                 this[$annotationRenderer].domElement.style.display = '';
                 this[$annotationRenderer].render(scene, camera);
             }
@@ -57567,7 +56381,7 @@ const AnnotationMixin = (ModelViewerElement) => {
                     normal: node.dataset.normal,
                 });
                 this[$hotspotMap].set(node.slot, hotspot);
-                this[$scene].model.addHotspot(hotspot);
+                this[$scene].addHotspot(hotspot);
                 // This happens automatically in render(), but we do it early so that
                 // the slots appear in the shadow DOM and the elements get attached,
                 // allowing us to dispatch events on them.
@@ -57584,7 +56398,7 @@ const AnnotationMixin = (ModelViewerElement) => {
                 return;
             }
             if (hotspot.decrement()) {
-                this[$scene].model.removeHotspot(hotspot);
+                this[$scene].removeHotspot(hotspot);
                 this[$hotspotMap].delete(node.slot);
             }
             this[$scene].isDirty = true;
@@ -57670,7 +56484,6 @@ var __decorate$2 = (undefined && undefined.__decorate) || function (decorators, 
 let isWebXRBlocked = false;
 let isSceneViewerBlocked = false;
 const noArViewerSigil = '#model-viewer-no-ar-fallback';
-const deserializeQuickLookBrowsers = enumerationDeserializer(['safari', 'chrome']);
 const deserializeARModes = enumerationDeserializer(['quick-look', 'scene-viewer', 'webxr', 'none']);
 const DEFAULT_AR_MODES = 'webxr scene-viewer quick-look';
 const ARMode = {
@@ -57686,8 +56499,6 @@ const $openIOSARQuickLook = Symbol('openIOSARQuickLook');
 const $canActivateAR = Symbol('canActivateAR');
 const $arMode = Symbol('arMode');
 const $arModes = Symbol('arModes');
-const $canLaunchQuickLook = Symbol('canLaunchQuickLook');
-const $quickLookBrowsers = Symbol('quickLookBrowsers');
 const $arAnchor = Symbol('arAnchor');
 const $preload = Symbol('preload');
 const $onARButtonContainerClick = Symbol('onARButtonContainerClick');
@@ -57695,15 +56506,15 @@ const $onARStatus = Symbol('onARStatus');
 const $onARTap = Symbol('onARTap');
 const $selectARMode = Symbol('selectARMode');
 const ARMixin = (ModelViewerElement) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     class ARModelViewerElement extends ModelViewerElement {
         constructor() {
             super(...arguments);
             this.ar = false;
             this.arScale = 'auto';
+            this.arPlacement = 'floor';
             this.arModes = DEFAULT_AR_MODES;
             this.iosSrc = null;
-            this.quickLookBrowsers = 'safari';
             this[_a] = false;
             // TODO: Add this to the shadow root as part of this mixin's
             // implementation:
@@ -57712,19 +56523,18 @@ const ARMixin = (ModelViewerElement) => {
             this[_d] = new Set();
             this[_e] = ARMode.NONE;
             this[_f] = false;
-            this[_g] = new Set();
-            this[_h] = (event) => {
+            this[_g] = (event) => {
                 event.preventDefault();
                 this.activateAR();
             };
-            this[_j] = ({ status }) => {
+            this[_h] = ({ status }) => {
                 if (status === ARStatus.NOT_PRESENTING ||
                     this[$renderer].arRenderer.presentedScene === this[$scene]) {
                     this.setAttribute('ar-status', status);
                     this.dispatchEvent(new CustomEvent('ar-status', { detail: { status } }));
                 }
             };
-            this[_k] = (event) => {
+            this[_j] = (event) => {
                 if (event.data == '_apple_ar_quicklook_button_tapped') {
                     this.dispatchEvent(new CustomEvent('quick-look-button-tapped'));
                 }
@@ -57746,9 +56556,12 @@ const ARMixin = (ModelViewerElement) => {
         }
         async update(changedProperties) {
             super.update(changedProperties);
-            if (changedProperties.has('quickLookBrowsers')) {
-                this[$quickLookBrowsers] =
-                    deserializeQuickLookBrowsers(this.quickLookBrowsers);
+            if (changedProperties.has('arScale')) {
+                this[$scene].canScale = this.arScale !== 'fixed';
+            }
+            if (changedProperties.has('arPlacement')) {
+                this[$scene].setShadowIntensity(this[$scene].shadowIntensity);
+                this[$needsRender]();
             }
             if (!changedProperties.has('ar') && !changedProperties.has('arModes') &&
                 !changedProperties.has('iosSrc')) {
@@ -57756,9 +56569,6 @@ const ARMixin = (ModelViewerElement) => {
             }
             if (changedProperties.has('arModes')) {
                 this[$arModes] = deserializeARModes(this.arModes);
-            }
-            if (changedProperties.has('arScale')) {
-                this[$scene].canScale = this.arScale !== 'fixed';
             }
             this[$selectARMode]();
         }
@@ -57785,7 +56595,7 @@ configuration or device capabilities');
                     break;
             }
         }
-        async [(_a = $canActivateAR, _b = $arButtonContainer, _c = $arAnchor, _d = $arModes, _e = $arMode, _f = $preload, _g = $quickLookBrowsers, _h = $onARButtonContainerClick, _j = $onARStatus, _k = $onARTap, $selectARMode)]() {
+        async [(_a = $canActivateAR, _b = $arButtonContainer, _c = $arAnchor, _d = $arModes, _e = $arMode, _f = $preload, _g = $onARButtonContainerClick, _h = $onARStatus, _j = $onARTap, $selectARMode)]() {
             this[$arMode] = ARMode.NONE;
             if (this.ar) {
                 const arModes = [];
@@ -57804,7 +56614,7 @@ configuration or device capabilities');
                         break;
                     }
                     else if (value === 'quick-look' && !!this.iosSrc &&
-                        this[$canLaunchQuickLook] && IS_AR_QUICKLOOK_CANDIDATE) {
+                        IS_AR_QUICKLOOK_CANDIDATE) {
                         this[$arMode] = ARMode.QUICK_LOOK;
                         break;
                     }
@@ -57823,15 +56633,6 @@ configuration or device capabilities');
                 this.dispatchEvent(new CustomEvent('ar-status', { detail: { status } }));
             }
         }
-        get [$canLaunchQuickLook]() {
-            if (IS_IOS_CHROME) {
-                return this[$quickLookBrowsers].has('chrome');
-            }
-            else if (IS_IOS_SAFARI) {
-                return this[$quickLookBrowsers].has('safari');
-            }
-            return false;
-        }
         async [$enterARWithWebXR]() {
             console.log('Attempting to present in AR...');
             if (!this[$loaded]) {
@@ -57842,7 +56643,9 @@ configuration or device capabilities');
             }
             try {
                 this[$arButtonContainer].removeEventListener('click', this[$onARButtonContainerClick]);
-                await this[$renderer].arRenderer.present(this[$scene]);
+                const { arRenderer } = this[$renderer];
+                arRenderer.placeOnWall = this.arPlacement === 'wall';
+                await arRenderer.present(this[$scene]);
             }
             catch (error) {
                 console.warn('Error while trying to present to AR');
@@ -57875,14 +56678,14 @@ configuration or device capabilities');
             // modelUrl can contain title/link/sound etc.
             // These are already URL-encoded, so we shouldn't do that again here.
             let intentParams = `?file=${modelUrl.toString()}&mode=ar_only`;
-            if (!gltfSrc.includes('&link=')) {
-                intentParams += `&link=${location}`;
-            }
-            if (!gltfSrc.includes('&title=')) {
-                intentParams += `&title=${encodeURIComponent(this.alt || '')}`;
+            if (!gltfSrc.includes('&disable_occlusion=')) {
+                intentParams += `&disable_occlusion=true`;
             }
             if (this.arScale === 'fixed') {
                 intentParams += `&resizable=false`;
+            }
+            if (this.arPlacement === 'wall') {
+                intentParams += `&enable_vertical_placement=true`;
             }
             const intent = `intent://arvr.google.com/scene-viewer/1.0${intentParams}#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(locationUrl.toString())};end;`;
             const undoHashChange = () => {
@@ -57910,7 +56713,10 @@ configuration or device capabilities');
         [$openIOSARQuickLook]() {
             const modelUrl = new URL(this.iosSrc, self.location.toString());
             if (this.arScale === 'fixed') {
-                modelUrl.hash = 'allowsContentScaling=0';
+                if (modelUrl.hash) {
+                    modelUrl.hash += '&';
+                }
+                modelUrl.hash += 'allowsContentScaling=0';
             }
             const anchor = this[$arAnchor];
             anchor.setAttribute('rel', 'ar');
@@ -57928,14 +56734,14 @@ configuration or device capabilities');
         property({ type: String, attribute: 'ar-scale' })
     ], ARModelViewerElement.prototype, "arScale", void 0);
     __decorate$2([
+        property({ type: String, attribute: 'ar-placement' })
+    ], ARModelViewerElement.prototype, "arPlacement", void 0);
+    __decorate$2([
         property({ type: String, attribute: 'ar-modes' })
     ], ARModelViewerElement.prototype, "arModes", void 0);
     __decorate$2([
         property({ type: String, attribute: 'ios-src' })
     ], ARModelViewerElement.prototype, "iosSrc", void 0);
-    __decorate$2([
-        property({ type: String, attribute: 'quick-look-browsers' })
-    ], ARModelViewerElement.prototype, "quickLookBrowsers", void 0);
     return ARModelViewerElement;
 };
 
@@ -57953,7 +56759,7 @@ configuration or device capabilities');
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$9, _b$7, _c$2;
+var _a$6, _b$4, _c$1;
 const $evaluate = Symbol('evaluate');
 const $lastValue = Symbol('lastValue');
 /**
@@ -57968,7 +56774,7 @@ const $lastValue = Symbol('lastValue');
  */
 class Evaluator {
     constructor() {
-        this[_a$9] = null;
+        this[_a$6] = null;
     }
     /**
      * An Evaluatable is a NumberNode or an Evaluator that evaluates a NumberNode
@@ -58101,7 +56907,7 @@ class Evaluator {
         return this[$lastValue];
     }
 }
-_a$9 = $lastValue;
+_a$6 = $lastValue;
 const $percentage = Symbol('percentage');
 const $basis = Symbol('basis');
 /**
@@ -58143,7 +56949,7 @@ const $identNode = Symbol('identNode');
 class EnvEvaluator extends Evaluator {
     constructor(envFunction) {
         super();
-        this[_b$7] = null;
+        this[_b$4] = null;
         const identNode = envFunction.arguments.length ? envFunction.arguments[0].terms[0] : null;
         if (identNode != null && identNode.type === 'ident') {
             this[$identNode] = identNode;
@@ -58153,7 +56959,7 @@ class EnvEvaluator extends Evaluator {
         return false;
     }
     ;
-    [(_b$7 = $identNode, $evaluate)]() {
+    [(_b$4 = $identNode, $evaluate)]() {
         if (this[$identNode] != null) {
             switch (this[$identNode].value) {
                 case 'window-scroll-y':
@@ -58185,7 +56991,7 @@ const $evaluator = Symbol('evalutor');
 class CalcEvaluator extends Evaluator {
     constructor(calcFunction, basis = ZERO) {
         super();
-        this[_c$2] = null;
+        this[_c$1] = null;
         if (calcFunction.arguments.length !== 1) {
             return;
         }
@@ -58224,7 +57030,7 @@ class CalcEvaluator extends Evaluator {
     get isConstant() {
         return this[$evaluator] == null || Evaluator.isConstant(this[$evaluator]);
     }
-    [(_c$2 = $evaluator, $evaluate)]() {
+    [(_c$1 = $evaluator, $evaluate)]() {
         return this[$evaluator] != null ? Evaluator.evaluate(this[$evaluator]) :
             ZERO;
     }
@@ -58348,7 +57154,7 @@ class StyleEvaluator extends Evaluator {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$a, _b$8, _c$3, _d$2;
+var _a$7, _b$5, _c$2, _d$1;
 const $instances = Symbol('instances');
 const $activateListener = Symbol('activateListener');
 const $deactivateListener = Symbol('deactivateListener');
@@ -58372,7 +57178,7 @@ class ScrollObserver {
             instance[$notify]();
         }
     }
-    static [(_a$a = $instances, $activateListener)]() {
+    static [(_a$7 = $instances, $activateListener)]() {
         window.addEventListener('scroll', this[$notifyInstances], { passive: true });
     }
     static [$deactivateListener]() {
@@ -58402,11 +57208,10 @@ class ScrollObserver {
     }
     ;
 }
-ScrollObserver[_a$a] = new Set();
+ScrollObserver[_a$7] = new Set();
 const $computeStyleCallback = Symbol('computeStyleCallback');
 const $astWalker = Symbol('astWalker');
 const $dependencies = Symbol('dependencies');
-const $scrollHandler = Symbol('scrollHandler');
 const $onScroll = Symbol('onScroll');
 /**
  * The StyleEffector is configured with a callback that will be invoked at the
@@ -58429,9 +57234,11 @@ const $onScroll = Symbol('onScroll');
  */
 class StyleEffector {
     constructor(callback) {
-        this[_b$8] = {};
-        this[_c$3] = new ASTWalker(['function']);
-        this[_d$2] = () => this[$onScroll]();
+        this[_b$5] = {};
+        this[_c$2] = new ASTWalker(['function']);
+        this[_d$1] = () => {
+            this[$computeStyleCallback]({ relatedState: 'window-scroll' });
+        };
         this[$computeStyleCallback] = callback;
     }
     /**
@@ -58454,7 +57261,7 @@ class StyleEffector {
                     if (newDependencies['window-scroll'] == null) {
                         const observer = 'window-scroll' in oldDependencies ?
                             oldDependencies['window-scroll'] :
-                            new ScrollObserver(this[$scrollHandler]);
+                            new ScrollObserver(this[$onScroll]);
                         observer.observe();
                         delete oldDependencies['window-scroll'];
                         newDependencies['window-scroll'] = observer;
@@ -58478,10 +57285,8 @@ class StyleEffector {
             observer.disconnect();
         }
     }
-    [(_b$8 = $dependencies, _c$3 = $astWalker, _d$2 = $scrollHandler, $onScroll)]() {
-        this[$computeStyleCallback]({ relatedState: 'window-scroll' });
-    }
 }
+_b$5 = $dependencies, _c$2 = $astWalker, _d$1 = $onScroll;
 
 /* @license
  * Copyright 2019 Google LLC. All Rights Reserved.
@@ -58665,6 +57470,7 @@ class SmoothControls extends EventDispatcher {
         this.element = element;
         this.sensitivity = 1;
         this._interactionEnabled = false;
+        this._disableZoom = false;
         this.isUserChange = false;
         this.isUserPointing = false;
         // Internal orbital position state
@@ -58746,7 +57552,7 @@ class SmoothControls extends EventDispatcher {
                         this.handleSinglePointerDown(touches[0]);
                         break;
                     case 2:
-                        this.touchMode = 'zoom';
+                        this.touchMode = this._disableZoom ? 'scroll' : 'zoom';
                         break;
                 }
                 this.lastTouches = touches;
@@ -58821,7 +57627,9 @@ class SmoothControls extends EventDispatcher {
             const { element } = this;
             element.addEventListener('mousemove', this.onPointerMove);
             element.addEventListener('mousedown', this.onPointerDown);
-            element.addEventListener('wheel', this.onWheel);
+            if (!this._disableZoom) {
+                element.addEventListener('wheel', this.onWheel);
+            }
             element.addEventListener('keydown', this.onKeyDown);
             element.addEventListener('touchstart', this.onPointerDown, { passive: true });
             element.addEventListener('touchmove', this.onPointerMove);
@@ -58836,7 +57644,9 @@ class SmoothControls extends EventDispatcher {
             const { element } = this;
             element.removeEventListener('mousemove', this.onPointerMove);
             element.removeEventListener('mousedown', this.onPointerDown);
-            element.removeEventListener('wheel', this.onWheel);
+            if (!this._disableZoom) {
+                element.removeEventListener('wheel', this.onWheel);
+            }
             element.removeEventListener('keydown', this.onKeyDown);
             element.removeEventListener('touchstart', this.onPointerDown);
             element.removeEventListener('touchmove', this.onPointerMove);
@@ -58851,6 +57661,17 @@ class SmoothControls extends EventDispatcher {
      */
     get options() {
         return this._options;
+    }
+    set disableZoom(disable) {
+        if (this._disableZoom != disable) {
+            this._disableZoom = disable;
+            if (disable === true) {
+                this.element.removeEventListener('wheel', this.onWheel);
+            }
+            else {
+                this.element.addEventListener('wheel', this.onWheel);
+            }
+        }
     }
     /**
      * Copy the spherical values that represent the current camera orbital
@@ -59225,7 +58046,7 @@ const cameraOrbitIntrinsics = (() => {
     const theta = normalizeUnit(defaultTerms[0]);
     const phi = normalizeUnit(defaultTerms[1]);
     return (element) => {
-        const radius = element[$scene].model.idealCameraDistance;
+        const radius = element[$scene].idealCameraDistance;
         return {
             basis: [theta, phi, numberNode(radius, 'm')],
             keywords: { auto: [null, null, numberNode(105, '%')] }
@@ -59233,7 +58054,7 @@ const cameraOrbitIntrinsics = (() => {
     };
 })();
 const minCameraOrbitIntrinsics = (element) => {
-    const radius = MINIMUM_RADIUS_RATIO * element[$scene].model.idealCameraDistance;
+    const radius = MINIMUM_RADIUS_RATIO * element[$scene].idealCameraDistance;
     return {
         basis: [
             numberNode(-Infinity, 'rad'),
@@ -59257,7 +58078,7 @@ const maxCameraOrbitIntrinsics = (element) => {
     };
 };
 const cameraTargetIntrinsics = (element) => {
-    const center = element[$scene].model.boundingBox.getCenter(new Vector3);
+    const center = element[$scene].boundingBox.getCenter(new Vector3);
     return {
         basis: [
             numberNode(center.x, 'm'),
@@ -59277,10 +58098,6 @@ const $promptAnimatedContainer = Symbol('promptAnimatedContainer');
 const $deferInteractionPrompt = Symbol('deferInteractionPrompt');
 const $updateAria = Symbol('updateAria');
 const $updateCameraForRadius = Symbol('updateCameraForRadius');
-const $blurHandler = Symbol('blurHandler');
-const $focusHandler = Symbol('focusHandler');
-const $changeHandler = Symbol('changeHandler');
-const $pointerChangeHandler = Symbol('pointerChangeHandler');
 const $onBlur = Symbol('onBlur');
 const $onFocus = Symbol('onFocus');
 const $onChange = Symbol('onChange');
@@ -59293,7 +58110,7 @@ const $focusedTime = Symbol('focusedTime');
 const $zoomAdjustedFieldOfView = Symbol('zoomAdjustedFieldOfView');
 const $lastSpherical = Symbol('lastSpherical');
 const $jumpCamera = Symbol('jumpCamera');
-const $initialized$1 = Symbol('initialized');
+const $initialized = Symbol('initialized');
 const $maintainThetaPhi = Symbol('maintainThetaPhi');
 const $syncCameraOrbit = Symbol('syncCameraOrbit');
 const $syncFieldOfView = Symbol('syncFieldOfView');
@@ -59321,6 +58138,8 @@ const ControlsMixin = (ModelViewerElement) => {
             this.interactionPolicy = InteractionPolicy.ALWAYS_ALLOW;
             this.orbitSensitivity = 1;
             this.touchAction = TouchAction.PAN_Y;
+            this.disableZoom = false;
+            this.bounds = 'legacy';
             this[_a] = this.shadowRoot.querySelector('.interaction-prompt');
             this[_b] = this.shadowRoot.querySelector('.interaction-prompt > .animated-container');
             this[_c] = Infinity;
@@ -59334,17 +58153,66 @@ const ControlsMixin = (ModelViewerElement) => {
             this[_l] = false;
             this[_m] = false;
             this[_o] = false;
-            this[_p] = (event) => this[$onChange](event);
-            this[_q] = (event) => this[$onPointerChange](event);
-            this[_r] = () => this[$onFocus]();
-            this[_s] = () => this[$onBlur]();
+            this[_p] = () => {
+                const input = this[$userInputElement];
+                if (!isFinite(this[$focusedTime])) {
+                    this[$focusedTime] = performance.now();
+                }
+                // NOTE(cdata): On every re-focus, we switch the aria-label back to
+                // the original, non-prompt label if appropriate. If the user has
+                // already interacted, they no longer need to hear the prompt.
+                // Otherwise, they will hear it again after the idle prompt threshold
+                // has been crossed.
+                const ariaLabel = this[$ariaLabel];
+                if (input.getAttribute('aria-label') !== ariaLabel) {
+                    input.setAttribute('aria-label', ariaLabel);
+                }
+                if (this.interactionPrompt === InteractionPromptStrategy.WHEN_FOCUSED &&
+                    !this[$userHasInteracted]) {
+                    this[$waitingToPromptUser] = true;
+                }
+            };
+            this[_q] = () => {
+                if (this.interactionPrompt !== InteractionPromptStrategy.WHEN_FOCUSED) {
+                    return;
+                }
+                this[$waitingToPromptUser] = false;
+                this[$promptElement].classList.remove('visible');
+                this[$promptElementVisibleTime] = Infinity;
+                this[$focusedTime] = Infinity;
+            };
+            this[_r] = ({ source }) => {
+                this[$updateAria]();
+                this[$needsRender]();
+                if (source === ChangeSource.USER_INTERACTION) {
+                    this[$userHasInteracted] = true;
+                    this[$deferInteractionPrompt]();
+                }
+                this.dispatchEvent(new CustomEvent('camera-change', { detail: { source } }));
+            };
+            this[_s] = (event) => {
+                if (event.type === 'pointer-change-start') {
+                    this[$container].classList.add('pointer-tumbling');
+                }
+                else {
+                    this[$container].classList.remove('pointer-tumbling');
+                }
+            };
         }
         getCameraOrbit() {
             const { theta, phi, radius } = this[$lastSpherical];
-            return { theta, phi, radius };
+            return {
+                theta,
+                phi,
+                radius,
+                toString() {
+                    return `${this.theta}rad ${this.phi}rad ${this.radius}m`;
+                }
+            };
         }
         getCameraTarget() {
-            return toVector3D(this[$scene].getTarget());
+            return toVector3D(this[$renderer].isPresenting ? this[$renderer].arRenderer.target :
+                this[$scene].getTarget());
         }
         getFieldOfView() {
             return this[$controls].getFieldOfView();
@@ -59370,15 +58238,15 @@ const ControlsMixin = (ModelViewerElement) => {
         }
         connectedCallback() {
             super.connectedCallback();
-            this[$controls].addEventListener('change', this[$changeHandler]);
-            this[$controls].addEventListener('pointer-change-start', this[$pointerChangeHandler]);
-            this[$controls].addEventListener('pointer-change-end', this[$pointerChangeHandler]);
+            this[$controls].addEventListener('change', this[$onChange]);
+            this[$controls].addEventListener('pointer-change-start', this[$onPointerChange]);
+            this[$controls].addEventListener('pointer-change-end', this[$onPointerChange]);
         }
         disconnectedCallback() {
             super.disconnectedCallback();
-            this[$controls].removeEventListener('change', this[$changeHandler]);
-            this[$controls].removeEventListener('pointer-change-start', this[$pointerChangeHandler]);
-            this[$controls].removeEventListener('pointer-change-end', this[$pointerChangeHandler]);
+            this[$controls].removeEventListener('change', this[$onChange]);
+            this[$controls].removeEventListener('pointer-change-start', this[$onPointerChange]);
+            this[$controls].removeEventListener('pointer-change-end', this[$onPointerChange]);
         }
         updated(changedProperties) {
             super.updated(changedProperties);
@@ -59390,15 +58258,21 @@ const ControlsMixin = (ModelViewerElement) => {
                     if (this.interactionPrompt === InteractionPromptStrategy.AUTO) {
                         this[$waitingToPromptUser] = true;
                     }
-                    input.addEventListener('focus', this[$focusHandler]);
-                    input.addEventListener('blur', this[$blurHandler]);
+                    input.addEventListener('focus', this[$onFocus]);
+                    input.addEventListener('blur', this[$onBlur]);
                 }
                 else {
-                    input.removeEventListener('focus', this[$focusHandler]);
-                    input.removeEventListener('blur', this[$blurHandler]);
+                    input.removeEventListener('focus', this[$onFocus]);
+                    input.removeEventListener('blur', this[$onBlur]);
                     controls.disableInteraction();
                     this[$deferInteractionPrompt]();
                 }
+            }
+            if (changedProperties.has('disableZoom')) {
+                controls.disableZoom = this.disableZoom;
+            }
+            if (changedProperties.has('bounds')) {
+                this[$scene].tightBounds = this.bounds === 'tight';
             }
             if (changedProperties.has('interactionPrompt') ||
                 changedProperties.has('cameraControls') ||
@@ -59423,17 +58297,33 @@ const ControlsMixin = (ModelViewerElement) => {
                 controls.applyOptions({ touchAction });
             }
             if (changedProperties.has('orbitSensitivity')) {
-                this[$controls].sensitivity = this.orbitSensitivity;
+                controls.sensitivity = this.orbitSensitivity;
             }
             if (this[$jumpCamera] === true) {
                 Promise.resolve().then(() => {
-                    this[$controls].jumpToGoal();
+                    controls.jumpToGoal();
                     this[$scene].jumpToGoal();
                     this[$jumpCamera] = false;
                 });
             }
         }
-        [(_a = $promptElement, _b = $promptAnimatedContainer, _c = $focusedTime, _d = $lastPromptOffset, _e = $promptElementVisibleTime, _f = $userHasInteracted, _g = $waitingToPromptUser, _h = $controls, _j = $zoomAdjustedFieldOfView, _k = $lastSpherical, _l = $jumpCamera, _m = $initialized$1, _o = $maintainThetaPhi, _p = $changeHandler, _q = $pointerChangeHandler, _r = $focusHandler, _s = $blurHandler, $syncFieldOfView)](style) {
+        async updateFraming() {
+            const scene = this[$scene];
+            const oldFramedFieldOfView = scene.framedFieldOfView;
+            await this.requestUpdate('cameraTarget');
+            scene.updateFraming(this.bounds === 'tight' ? scene.getTarget() : undefined);
+            scene.frameModel();
+            const newFramedFieldOfView = scene.framedFieldOfView;
+            const zoom = this[$controls].getFieldOfView() / oldFramedFieldOfView;
+            this[$zoomAdjustedFieldOfView] = newFramedFieldOfView * zoom;
+            this[$maintainThetaPhi] = true;
+            this.requestUpdate('maxFieldOfView');
+            this.requestUpdate('fieldOfView');
+            this.requestUpdate('minCameraOrbit');
+            this.requestUpdate('maxCameraOrbit');
+            await this.requestUpdate('cameraOrbit');
+        }
+        [(_a = $promptElement, _b = $promptAnimatedContainer, _c = $focusedTime, _d = $lastPromptOffset, _e = $promptElementVisibleTime, _f = $userHasInteracted, _g = $waitingToPromptUser, _h = $controls, _j = $zoomAdjustedFieldOfView, _k = $lastSpherical, _l = $jumpCamera, _m = $initialized, _o = $maintainThetaPhi, $syncFieldOfView)](style) {
             this[$controls].setFieldOfView(style[0] * 180 / Math.PI);
         }
         [$syncCameraOrbit](style) {
@@ -59475,8 +58365,8 @@ const ControlsMixin = (ModelViewerElement) => {
             this[$scene].setTarget(x, y, z);
             this[$renderer].arRenderer.updateTarget();
         }
-        [$tick$1](time, delta) {
-            super[$tick$1](time, delta);
+        [$tick](time, delta) {
+            super[$tick](time, delta);
             if (this[$renderer].isPresenting || !this[$hasTransitioned]()) {
                 return;
             }
@@ -59524,7 +58414,7 @@ const ControlsMixin = (ModelViewerElement) => {
          * orbiting at the supplied radius.
          */
         [$updateCameraForRadius](radius) {
-            const { idealCameraDistance } = this[$scene].model;
+            const { idealCameraDistance } = this[$scene];
             const maximumRadius = Math.max(idealCameraDistance, radius);
             const near = 0;
             const far = 2 * maximumRadius;
@@ -59572,11 +58462,11 @@ const ControlsMixin = (ModelViewerElement) => {
             super[$onModelLoad]();
             const { framedFieldOfView } = this[$scene];
             this[$zoomAdjustedFieldOfView] = framedFieldOfView;
-            if (this[$initialized$1]) {
+            if (this[$initialized]) {
                 this[$maintainThetaPhi] = true;
             }
             else {
-                this[$initialized$1] = true;
+                this[$initialized] = true;
             }
             this.requestUpdate('maxFieldOfView', this.maxFieldOfView);
             this.requestUpdate('fieldOfView', this.fieldOfView);
@@ -59586,52 +58476,8 @@ const ControlsMixin = (ModelViewerElement) => {
             this.requestUpdate('cameraTarget', this.cameraTarget);
             this.jumpCameraToGoal();
         }
-        [$onFocus]() {
-            const input = this[$userInputElement];
-            if (!isFinite(this[$focusedTime])) {
-                this[$focusedTime] = performance.now();
-            }
-            // NOTE(cdata): On every re-focus, we switch the aria-label back to
-            // the original, non-prompt label if appropriate. If the user has
-            // already interacted, they no longer need to hear the prompt.
-            // Otherwise, they will hear it again after the idle prompt threshold
-            // has been crossed.
-            const ariaLabel = this[$ariaLabel];
-            if (input.getAttribute('aria-label') !== ariaLabel) {
-                input.setAttribute('aria-label', ariaLabel);
-            }
-            if (this.interactionPrompt === InteractionPromptStrategy.WHEN_FOCUSED &&
-                !this[$userHasInteracted]) {
-                this[$waitingToPromptUser] = true;
-            }
-        }
-        [$onBlur]() {
-            if (this.interactionPrompt !== InteractionPromptStrategy.WHEN_FOCUSED) {
-                return;
-            }
-            this[$waitingToPromptUser] = false;
-            this[$promptElement].classList.remove('visible');
-            this[$promptElementVisibleTime] = Infinity;
-            this[$focusedTime] = Infinity;
-        }
-        [$onChange]({ source }) {
-            this[$updateAria]();
-            this[$needsRender]();
-            if (source === ChangeSource.USER_INTERACTION) {
-                this[$userHasInteracted] = true;
-                this[$deferInteractionPrompt]();
-            }
-            this.dispatchEvent(new CustomEvent('camera-change', { detail: { source } }));
-        }
-        [$onPointerChange](event) {
-            if (event.type === 'pointer-change-start') {
-                this[$container].classList.add('pointer-tumbling');
-            }
-            else {
-                this[$container].classList.remove('pointer-tumbling');
-            }
-        }
     }
+    _p = $onFocus, _q = $onBlur, _r = $onChange, _s = $onPointerChange;
     __decorate$3([
         property({ type: Boolean, attribute: 'camera-controls' })
     ], ControlsModelViewerElement.prototype, "cameraControls", void 0);
@@ -59705,6 +58551,12 @@ const ControlsMixin = (ModelViewerElement) => {
     __decorate$3([
         property({ type: String, attribute: 'touch-action' })
     ], ControlsModelViewerElement.prototype, "touchAction", void 0);
+    __decorate$3([
+        property({ type: Boolean, attribute: 'disable-zoom' })
+    ], ControlsModelViewerElement.prototype, "disableZoom", void 0);
+    __decorate$3([
+        property({ type: String, attribute: 'bounds' })
+    ], ControlsModelViewerElement.prototype, "bounds", void 0);
     return ControlsModelViewerElement;
 };
 
@@ -59801,7 +58653,7 @@ const EnvironmentMixin = (ModelViewerElement) => {
             }
             try {
                 const { environmentMap, skybox } = await new Promise(async (resolve, reject) => {
-                    const texturesLoad = textureUtils.generateEnvironmentMapAndSkybox(deserializeUrl(skyboxImage), deserializeUrl(environmentImage), { progressTracker: this[$progressTracker] });
+                    const texturesLoad = textureUtils.generateEnvironmentMapAndSkybox(deserializeUrl(skyboxImage), environmentImage, { progressTracker: this[$progressTracker] });
                     this[$cancelEnvironmentUpdate] = () => reject(texturesLoad);
                     resolve(await texturesLoad);
                 });
@@ -59818,7 +58670,7 @@ const EnvironmentMixin = (ModelViewerElement) => {
                     this[$scene].background = null;
                 }
                 this[$applyEnvironmentMap](environmentMap.texture);
-                this[$scene].model.dispatchEvent({ type: 'envmap-update' });
+                this[$scene].dispatchEvent({ type: 'envmap-update' });
             }
             catch (errorOrPromise) {
                 if (errorOrPromise instanceof Error) {
@@ -59872,7 +58724,7 @@ const EnvironmentMixin = (ModelViewerElement) => {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var _a$b, _b$9;
+var _a$8, _b$6;
 const INITIAL_STATUS_ANNOUNCEMENT = 'This page includes one or more 3D models that are loading';
 const FINISHED_LOADING_ANNOUNCEMENT = 'All 3D models in the page have loaded';
 const UPDATE_STATUS_DEBOUNCE_MS = 100;
@@ -59898,7 +58750,7 @@ class LoadingStatusAnnouncer extends EventDispatcher {
          * document at any given time. It might change as <model-viewer> elements are
          * attached or detached over time.
          */
-        this[_a$b] = null;
+        this[_a$8] = null;
         this.registeredInstanceStatuses = new Map();
         this.loadingPromises = [];
         /**
@@ -59912,7 +58764,7 @@ class LoadingStatusAnnouncer extends EventDispatcher {
          */
         this.statusElement = document.createElement('p');
         this.statusUpdateInProgress = false;
-        this[_b$9] = debounce(() => this.updateStatus(), UPDATE_STATUS_DEBOUNCE_MS);
+        this[_b$6] = debounce(() => this.updateStatus(), UPDATE_STATUS_DEBOUNCE_MS);
         const { statusElement } = this;
         const { style } = statusElement;
         statusElement.setAttribute('role', 'status');
@@ -60003,7 +58855,7 @@ class LoadingStatusAnnouncer extends EventDispatcher {
         this.dispatchEvent({ type: 'finished-loading-announced' });
     }
 }
-_a$b = $modelViewerStatusInstance, _b$9 = $updateStatus;
+_a$8 = $modelViewerStatusInstance, _b$6 = $updateStatus;
 
 /* @license
  * Copyright 2019 Google LLC. All Rights Reserved.
@@ -60049,16 +58901,12 @@ const $defaultProgressMaskElement = Symbol('defaultProgressMaskElement');
 const $posterContainerElement = Symbol('posterContainerElement');
 const $defaultPosterElement = Symbol('defaultPosterElement');
 const $posterDismissalSource = Symbol('posterDismissalSource');
-const $showPoster = Symbol('showPoster');
 const $hidePoster = Symbol('hidePoster');
 const $modelIsRevealed = Symbol('modelIsRevealed');
 const $updateProgressBar = Symbol('updateProgressBar');
 const $lastReportedProgress = Symbol('lastReportedProgress');
 const $transitioned = Symbol('transitioned');
 const $ariaLabelCallToAction = Symbol('ariaLabelCallToAction');
-const $clickHandler = Symbol('clickHandler');
-const $keydownHandler = Symbol('keydownHandler');
-const $progressHandler = Symbol('processHandler');
 const $onClick = Symbol('onClick');
 const $onKeydown = Symbol('onKeydown');
 const $onProgress = Symbol('onProgress');
@@ -60150,10 +58998,7 @@ const LoadingMixin = (ModelViewerElement) => {
             this[_g] = this.shadowRoot.querySelector('#default-progress-bar > .bar');
             this[_h] = this.shadowRoot.querySelector('#default-progress-bar > .mask');
             this[_j] = this[$defaultPosterElement].getAttribute('aria-label');
-            this[_k] = () => this[$onClick]();
-            this[_l] = (event) => this[$onKeydown](event);
-            this[_m] = (event) => this[$onProgress](event);
-            this[_o] = throttle((progress) => {
+            this[_k] = throttle((progress) => {
                 const parentNode = this[$defaultProgressBarElement].parentNode;
                 requestAnimationFrame(() => {
                     this[$defaultProgressMaskElement].style.opacity =
@@ -60180,6 +59025,40 @@ const LoadingMixin = (ModelViewerElement) => {
                     }
                 });
             }, PROGRESS_BAR_UPDATE_THRESHOLD);
+            this[_l] = () => {
+                if (this.reveal === RevealStrategy.MANUAL) {
+                    return;
+                }
+                this.dismissPoster();
+            };
+            this[_m] = (event) => {
+                if (this.reveal === RevealStrategy.MANUAL) {
+                    return;
+                }
+                switch (event.keyCode) {
+                    // NOTE(cdata): Links and buttons can typically be activated with
+                    // both spacebar and enter to produce a synthetic click action
+                    case SPACE_KEY:
+                    case ENTER_KEY:
+                        this.dismissPoster();
+                        break;
+                }
+            };
+            this[_o] = (event) => {
+                const progress = event.detail.totalProgress;
+                this[$lastReportedProgress] =
+                    Math.max(progress, this[$lastReportedProgress]);
+                if (progress === 1.0) {
+                    this[$updateProgressBar].flush();
+                    if (this[$sceneIsReady]() &&
+                        (this[$posterDismissalSource] != null ||
+                            this.reveal === RevealStrategy.AUTO)) {
+                        this[$hidePoster]();
+                    }
+                }
+                this[$updateProgressBar](progress);
+                this.dispatchEvent(new CustomEvent('progress', { detail: { totalProgress: progress } }));
+            };
             const ModelViewerElement = self.ModelViewerElement || {};
             const dracoDecoderLocation = ModelViewerElement.dracoDecoderLocation ||
                 DEFAULT_DRACO_DECODER_LOCATION;
@@ -60215,27 +59094,44 @@ const LoadingMixin = (ModelViewerElement) => {
             }
         }
         /**
+         * Displays the poster, hiding the 3D model. If this is called after the 3D
+         * model has been revealed, then it will behave as though
+         * reveal='interaction', being dismissed either by a user click or a call to
+         * dismissPoster().
+         */
+        showPoster() {
+            const posterContainerElement = this[$posterContainerElement];
+            const defaultPosterElement = this[$defaultPosterElement];
+            defaultPosterElement.removeAttribute('tabindex');
+            defaultPosterElement.removeAttribute('aria-hidden');
+            posterContainerElement.classList.add('show');
+            const oldVisibility = this.modelIsVisible;
+            this[$modelIsRevealed] = false;
+            this[$announceModelVisibility](oldVisibility);
+            this[$transitioned] = false;
+        }
+        /**
          * Returns the model's bounding box dimensions in meters, independent of
          * turntable rotation.
          */
         getDimensions() {
-            return toVector3D(this[$scene].model.size);
+            return toVector3D(this[$scene].size);
         }
         connectedCallback() {
             super.connectedCallback();
             // Fired when a user first clicks the model element. Used to
             // change the visibility of a poster image, or start loading
             // a model.
-            this[$posterContainerElement].addEventListener('click', this[$clickHandler]);
-            this[$posterContainerElement].addEventListener('keydown', this[$keydownHandler]);
-            this[$progressTracker].addEventListener('progress', this[$progressHandler]);
+            this[$posterContainerElement].addEventListener('click', this[$onClick]);
+            this[$posterContainerElement].addEventListener('keydown', this[$onKeydown]);
+            this[$progressTracker].addEventListener('progress', this[$onProgress]);
             loadingStatusAnnouncer.registerInstance(this);
         }
         disconnectedCallback() {
             super.disconnectedCallback();
-            this[$posterContainerElement].removeEventListener('click', this[$clickHandler]);
-            this[$posterContainerElement].removeEventListener('keydown', this[$keydownHandler]);
-            this[$progressTracker].removeEventListener('progress', this[$progressHandler]);
+            this[$posterContainerElement].removeEventListener('click', this[$onClick]);
+            this[$posterContainerElement].removeEventListener('keydown', this[$onKeydown]);
+            this[$progressTracker].removeEventListener('progress', this[$onProgress]);
             loadingStatusAnnouncer.unregisterInstance(this);
         }
         async updated(changedProperties) {
@@ -60253,41 +59149,7 @@ const LoadingMixin = (ModelViewerElement) => {
                 }
             }
         }
-        [(_a = $modelIsRevealed, _b = $transitioned, _c = $lastReportedProgress, _d = $posterDismissalSource, _e = $posterContainerElement, _f = $defaultPosterElement, _g = $defaultProgressBarElement, _h = $defaultProgressMaskElement, _j = $ariaLabelCallToAction, _k = $clickHandler, _l = $keydownHandler, _m = $progressHandler, _o = $updateProgressBar, $onClick)]() {
-            if (this.reveal === RevealStrategy.MANUAL) {
-                return;
-            }
-            this.dismissPoster();
-        }
-        [$onKeydown](event) {
-            if (this.reveal === RevealStrategy.MANUAL) {
-                return;
-            }
-            switch (event.keyCode) {
-                // NOTE(cdata): Links and buttons can typically be activated with
-                // both spacebar and enter to produce a synthetic click action
-                case SPACE_KEY:
-                case ENTER_KEY:
-                    this.dismissPoster();
-                    break;
-            }
-        }
-        [$onProgress](event) {
-            const progress = event.detail.totalProgress;
-            this[$lastReportedProgress] =
-                Math.max(progress, this[$lastReportedProgress]);
-            if (progress === 1.0) {
-                this[$updateProgressBar].flush();
-                if (this[$sceneIsReady]() &&
-                    (this[$posterDismissalSource] != null ||
-                        this.reveal === RevealStrategy.AUTO)) {
-                    this[$hidePoster]();
-                }
-            }
-            this[$updateProgressBar](progress);
-            this.dispatchEvent(new CustomEvent('progress', { detail: { totalProgress: progress } }));
-        }
-        [$shouldAttemptPreload]() {
+        [(_a = $modelIsRevealed, _b = $transitioned, _c = $lastReportedProgress, _d = $posterDismissalSource, _e = $posterContainerElement, _f = $defaultPosterElement, _g = $defaultProgressBarElement, _h = $defaultProgressMaskElement, _j = $ariaLabelCallToAction, _k = $updateProgressBar, _l = $onClick, _m = $onKeydown, _o = $onProgress, $shouldAttemptPreload)]() {
             return !!this.src &&
                 (this[$posterDismissalSource] != null ||
                     this.loading === LoadingStrategy.EAGER ||
@@ -60297,17 +59159,6 @@ const LoadingMixin = (ModelViewerElement) => {
             const { src } = this;
             return !!src && super[$sceneIsReady]() &&
                 this[$lastReportedProgress] === 1.0;
-        }
-        [$showPoster]() {
-            const posterContainerElement = this[$posterContainerElement];
-            const defaultPosterElement = this[$defaultPosterElement];
-            defaultPosterElement.removeAttribute('tabindex');
-            defaultPosterElement.removeAttribute('aria-hidden');
-            posterContainerElement.classList.add('show');
-            const oldVisibility = this.modelIsVisible;
-            this[$modelIsRevealed] = false;
-            this[$announceModelVisibility](oldVisibility);
-            this[$transitioned] = false;
         }
         [$hidePoster]() {
             this[$posterDismissalSource] = null;
@@ -60347,10 +59198,10 @@ const LoadingMixin = (ModelViewerElement) => {
         }
         async [$updateSource]() {
             this[$lastReportedProgress] = 0;
-            if (this[$scene].model.currentGLTF == null || this.src == null ||
+            if (this[$scene].currentGLTF == null || this.src == null ||
                 !this[$shouldAttemptPreload]()) {
                 // Don't show the poster when switching models.
-                this[$showPoster]();
+                this.showPoster();
             }
             await super[$updateSource]();
         }
@@ -60367,1610 +59218,10 @@ const LoadingMixin = (ModelViewerElement) => {
     return LoadingModelViewerElement;
 };
 
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
- * The protocol between 3DOM execution contexts is strictly defined.
- * Only specific types of messages are allowed, and their types are
- * all included in the ThreeDOMMessageType map.
- */
-const ThreeDOMMessageType = {
-    // === Host -> Scene Graph ===
-    // Used when the host execution context and scene graph execution context
-    // are negotiating a connection
-    HANDSHAKE: 1,
-    // A message that indicates that a custom script is meant to be imported
-    // into the scene graph execution context
-    IMPORT_SCRIPT: 2,
-    // A notification from the host execution context that the main Model has
-    // changed, including the sparse, serialized scene graph of the new Model
-    MODEL_CHANGE: 3,
-    // A notification that confirms or denies a request from the scene graph
-    // context to mutate the scene graph
-    MUTATION_RESULT: 4,
-    // === Scene Graph => Host ===
-    // Notification sent to the host execution context to indicate that the
-    // scene graph execution context has finished initializing
-    CONTEXT_INITIALIZED: 5,
-    // A request from the scene graph execution context to mutate some detail
-    // of the backing host scene graph
-    MUTATE: 6
-};
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-const $ownerModel = Symbol('ownerModel');
-/**
- * The basic implementation for all 3DOM scene graph participants.
- * Scene graph nodes are distinguished by their "owner" Model. All scene
- * graph nodes have an owner Model associated with them except for the
- * sole Model in the scene graph, whose ownerModel property is not defined.
- */
-class ThreeDOMElement {
-    constructor(kernel) {
-        if (kernel == null) {
-            throw new Error('Illegal constructor');
-        }
-        this[$ownerModel] = kernel.model;
-    }
-    /**
-     * The Model of provenance for this scene graph element, or undefined if
-     * element is itself a Model.
-     */
-    get ownerModel() {
-        return this[$ownerModel];
-    }
-}
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-const $kernel = Symbol('kernel');
-const $uri = Symbol('uri');
-const $name = Symbol('name');
-class Image extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[$kernel] = kernel;
-        this[$uri] = serialized.uri || null;
-        if (serialized.name != null) {
-            this[$name] = serialized.name;
-        }
-    }
-    get name() {
-        return this[$name];
-    }
-    get type() {
-        return this.uri != null ? 'external' : 'embedded';
-    }
-    get uri() {
-        return this[$uri];
-    }
-    async setURI(uri) {
-        await this[$kernel].mutate(this, 'uri', uri);
-        this[$uri] = uri;
-    }
-}
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$c, _b$a, _c$4;
-const $pbrMetallicRoughness = Symbol('pbrMetallicRoughness');
-const $normalTexture = Symbol('normalTexture');
-const $occlusionTexture = Symbol('occlusionTexture');
-const $emissiveTexture = Symbol('emissiveTexture');
-const $kernel$1 = Symbol('kernel');
-const $name$1 = Symbol('name');
-/**
- * A Material represents a live material in the backing scene graph. Its
- * primary purpose is to give the user write access to discrete properties
- * (for example, the base color factor) of the backing material.
- */
-class Material$1 extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[_a$c] = null;
-        this[_b$a] = null;
-        this[_c$4] = null;
-        this[$kernel$1] = kernel;
-        if (serialized.name != null) {
-            this[$name$1] = serialized.name;
-        }
-        const { pbrMetallicRoughness, normalTexture, occlusionTexture, emissiveTexture } = serialized;
-        this[$pbrMetallicRoughness] =
-            kernel.deserialize('pbr-metallic-roughness', pbrMetallicRoughness);
-        if (normalTexture != null) {
-            this[$normalTexture] = kernel.deserialize('texture-info', normalTexture);
-        }
-        if (occlusionTexture != null) {
-            this[$occlusionTexture] =
-                kernel.deserialize('texture-info', occlusionTexture);
-        }
-        if (emissiveTexture != null) {
-            this[$emissiveTexture] =
-                kernel.deserialize('texture-info', emissiveTexture);
-        }
-    }
-    /**
-     * The PBR properties that are assigned to this material, if any.
-     */
-    get pbrMetallicRoughness() {
-        return this[$pbrMetallicRoughness];
-    }
-    get normalTexture() {
-        return this[$normalTexture];
-    }
-    get occlusionTexture() {
-        return this[$occlusionTexture];
-    }
-    get emissiveTexture() {
-        return this[$emissiveTexture];
-    }
-    /**
-     * The name of the material. Note that names are optional and not
-     * guaranteed to be unique.
-     */
-    get name() {
-        return this[$name$1];
-    }
-}
-_a$c = $normalTexture, _b$a = $occlusionTexture, _c$4 = $emissiveTexture;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$d;
-const $materials = Symbol('material');
-const $kernel$2 = Symbol('kernel');
-/**
- * A Model is the root element of a 3DOM scene graph. It is considered the
- * element of provenance for all other elements that participate in the same
- * graph. All other elements in the graph can be accessed in from the Model
- * in some fashion.
- */
-class Model$1 extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[_a$d] = Object.freeze([]);
-        this[$kernel$2] = kernel;
-        for (const material of serialized.materials) {
-            this[$kernel$2].deserialize('material', material);
-        }
-    }
-    /**
-     * The set of Material elements in the graph, in sparse traversal order.
-     * Note that this set will include any Materials that are not part of the
-     * currently activate scene.
-     *
-     * TODO(#1002): This value needs to be sensitive to scene graph order
-     */
-    get materials() {
-        return this[$kernel$2].getElementsByType('material');
-    }
-    /**
-     * A Model has no owner model; it owns itself.
-     */
-    get ownerModel() {
-        return this;
-    }
-}
-_a$d = $materials;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$e, _b$b;
-const $kernel$3 = Symbol('kernel');
-const $baseColorFactor = Symbol('baseColorFactor');
-const $baseColorTexture = Symbol('baseColorTexture');
-const $metallicRoughnessTexture = Symbol('metallicRoughnessTexture');
-const $metallicFactor = Symbol('metallicFactor');
-const $roughnessFactor = Symbol('roughnessFactor');
-/**
- * PBRMetallicRoughness exposes the PBR properties for a given Material.
- */
-class PBRMetallicRoughness extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[_a$e] = null;
-        this[_b$b] = null;
-        this[$kernel$3] = kernel;
-        this[$baseColorFactor] = Object.freeze(serialized.baseColorFactor);
-        this[$metallicFactor] = serialized.metallicFactor;
-        this[$roughnessFactor] = serialized.roughnessFactor;
-        const { baseColorTexture, metallicRoughnessTexture } = serialized;
-        if (baseColorTexture != null) {
-            this[$baseColorTexture] =
-                kernel.deserialize('texture-info', baseColorTexture);
-        }
-        if (metallicRoughnessTexture != null) {
-            this[$metallicRoughnessTexture] =
-                kernel.deserialize('texture-info', metallicRoughnessTexture);
-        }
-    }
-    /**
-     * The base color factor of the material in RGBA format.
-     */
-    get baseColorFactor() {
-        return this[$baseColorFactor];
-    }
-    /**
-     * The metalness factor of the material in range [0,1].
-     */
-    get metallicFactor() {
-        return this[$metallicFactor];
-    }
-    /**
-     * The roughness factor of the material in range [0,1].
-     */
-    get roughnessFactor() {
-        return this[$roughnessFactor];
-    }
-    get baseColorTexture() {
-        return this[$baseColorTexture];
-    }
-    get metallicRoughnessTexture() {
-        return this[$metallicRoughnessTexture];
-    }
-    /**
-     * Set the base color factor of the material.
-     *
-     * @see ../api.ts
-     */
-    async setBaseColorFactor(color) {
-        await this[$kernel$3].mutate(this, 'baseColorFactor', color);
-        this[$baseColorFactor] = Object.freeze(color);
-    }
-    /**
-     * Set the metallic factor of the material.
-     *
-     * @see ../api.ts
-     */
-    async setMetallicFactor(factor) {
-        await this[$kernel$3].mutate(this, 'metallicFactor', factor);
-        this[$metallicFactor] = factor;
-    }
-    /**
-     * Set the roughness factor of the material.
-     *
-     * @see ../api.ts
-     */
-    async setRoughnessFactor(factor) {
-        await this[$kernel$3].mutate(this, 'roughnessFactor', factor);
-        this[$roughnessFactor] = factor;
-    }
-}
-_a$e = $baseColorTexture, _b$b = $metallicRoughnessTexture;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$f, _b$c;
-const $kernel$4 = Symbol('kernel');
-const $minFilter = Symbol('minFilter');
-const $magFilter = Symbol('magFilter');
-const $wrapS = Symbol('wrapS');
-const $wrapT = Symbol('wrapT');
-const $name$2 = Symbol('name');
-class Sampler extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[_a$f] = null;
-        this[_b$c] = null;
-        this[$kernel$4] = kernel;
-        if (serialized.name != null) {
-            this[$name$2] = serialized.name;
-        }
-        this[$minFilter] = serialized.minFilter || null;
-        this[$magFilter] = serialized.magFilter || null;
-        this[$wrapS] = serialized.wrapS || 10497;
-        this[$wrapT] = serialized.wrapT || 10497;
-    }
-    get name() {
-        return this[$name$2];
-    }
-    get minFilter() {
-        return this[$minFilter];
-    }
-    get magFilter() {
-        return this[$magFilter];
-    }
-    get wrapS() {
-        return this[$wrapS];
-    }
-    get wrapT() {
-        return this[$wrapT];
-    }
-    async setMinFilter(filter) {
-        await this[$kernel$4].mutate(this, 'minFilter', filter);
-        this[$minFilter] = filter;
-    }
-    async setMagFilter(filter) {
-        await this[$kernel$4].mutate(this, 'magFilter', filter);
-        this[$magFilter] = filter;
-    }
-    async setWrapS(mode) {
-        await this[$kernel$4].mutate(this, 'wrapS', mode);
-        this[$wrapS] = mode;
-    }
-    async setWrapT(mode) {
-        await this[$kernel$4].mutate(this, 'wrapT', mode);
-        this[$wrapT] = mode;
-    }
-}
-_a$f = $minFilter, _b$c = $magFilter;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$g;
-const $kernel$5 = Symbol('kernel');
-const $texture = Symbol('texture');
-class TextureInfo extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[_a$g] = null;
-        this[$kernel$5] = kernel;
-        const { texture } = serialized;
-        if (texture != null) {
-            this[$texture] = kernel.deserialize('texture', texture);
-        }
-    }
-    get texture() {
-        return this[$texture];
-    }
-    async setTexture(texture) {
-        await this[$kernel$5].mutate(this, 'texture', texture);
-        this[$texture] = texture;
-    }
-}
-_a$g = $texture;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$h, _b$d;
-const $kernel$6 = Symbol('kernel');
-const $source = Symbol('source');
-const $sampler = Symbol('sampler');
-const $name$3 = Symbol('name');
-class Texture$1 extends ThreeDOMElement {
-    constructor(kernel, serialized) {
-        super(kernel);
-        this[_a$h] = null;
-        this[_b$d] = null;
-        this[$kernel$6] = kernel;
-        const { sampler, source, name } = serialized;
-        if (name != null) {
-            this[$name$3] = name;
-        }
-        if (sampler != null) {
-            this[$sampler] = kernel.deserialize('sampler', sampler);
-        }
-        if (source != null) {
-            this[$source] = kernel.deserialize('image', source);
-        }
-    }
-    get name() {
-        return this[$name$3];
-    }
-    get sampler() {
-        return this[$sampler];
-    }
-    get source() {
-        return this[$source];
-    }
-    async setSampler(sampler) {
-        await this[$kernel$6].mutate(this, 'sampler', sampler);
-        this[$sampler] = sampler;
-    }
-    async setSource(image) {
-        await this[$kernel$6].mutate(this, 'source', image);
-        this[$source] = image;
-    }
-}
-_a$h = $source, _b$d = $sampler;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$i, _b$e, _c$5, _d$3, _e$2, _f$2;
-const ThreeDOMElementMap = {
-    'model': Model$1,
-    'material': Material$1,
-    'pbr-metallic-roughness': PBRMetallicRoughness,
-    'image': Image,
-    'sampler': Sampler,
-    'texture': Texture$1,
-    'texture-info': TextureInfo
-};
-const $onMessageEvent = Symbol('onMessageEvent');
-const $port = Symbol('port');
-const $model = Symbol('model');
-const $elementsByLocalId = Symbol('elementsByLocalId');
-const $localIdsByElement = Symbol('localIdsByElement');
-const $elementsByType = Symbol('elementsByType');
-const $pendingMutations = Symbol('pendingMutations');
-const $nextMutationId = Symbol('nextMutationId');
-/**
- * A ModelKernel is the core business logic implementation for a distinct
- * Model that has been exposed to a script execution context. The ModelKernel
- * is an internal detail, and should never be explicitly exposed to users of
- * a Model.
- *
- * The ModelKernel primarily handles deserializing scene graph elements, and
- * communicating mutations from the 3DOM execution context to the host
- * execution context where the backing scene graph lives.
- *
- * A ModelKernel also maintains a comprehensive map of elements by type to
- * assist scene graph elements in querying for their contemporaries.
- */
-class ModelKernel {
-    constructor(port, serialized) {
-        this[_a$i] = new Map();
-        this[_b$e] = new Map();
-        this[_c$5] = new Map();
-        this[_d$3] = new Map();
-        this[_e$2] = 0;
-        this[_f$2] = (event) => {
-            const { data } = event;
-            switch (data && data.type) {
-                case ThreeDOMMessageType.MUTATION_RESULT: {
-                    const message = data;
-                    const { applied, mutationId } = message;
-                    const pendingMutation = this[$pendingMutations].get(mutationId);
-                    this[$pendingMutations].delete(mutationId);
-                    if (pendingMutation != null) {
-                        applied ? pendingMutation.resolve() : pendingMutation.reject();
-                    }
-                    break;
-                }
-            }
-        };
-        const types = new Array('model', 'material', 'pbr-metallic-roughness', 'sampler', 'image', 'texture', 'texture-info');
-        for (const type of types) {
-            this[$elementsByType].set(type, new Set());
-        }
-        this[$port] = port;
-        this[$port].addEventListener('message', this[$onMessageEvent]);
-        this[$port].start();
-        this[$model] = this.deserialize('model', serialized);
-    }
-    /**
-     * The root scene graph element, a Model, that is the entrypoint for the
-     * entire scene graph that is backed by this kernel.
-     */
-    get model() {
-        return this[$model];
-    }
-    /**
-     * Mutate a property of a property of a given scene graph element. All
-     * direct mutations of the scene graph are considered asynchronous. This
-     * method returns a Promise that resolves when the mutation has been
-     * successfully applied to the backing scene graph, and rejects if the
-     * mutation failed or is otherwise not allowed.
-     *
-     * TODO(#1006): How to validate values?
-     */
-    async mutate(element, property, value) {
-        if (!this[$localIdsByElement].has(element)) {
-            throw new Error('Cannot mutate unknown element');
-        }
-        const id = this[$localIdsByElement].get(element);
-        if (value instanceof ThreeDOMElement) {
-            value = this[$localIdsByElement].get(value);
-        }
-        return new Promise((resolve, reject) => {
-            const mutationId = this[$nextMutationId]++;
-            // TODO(#1006): Validate mutations before sending to host context:
-            this[$port].postMessage({
-                type: ThreeDOMMessageType.MUTATE,
-                id,
-                property,
-                value,
-                mutationId,
-            });
-            // TODO(#1011): Add timeout to reject this mutation:
-            this[$pendingMutations].set(mutationId, {
-                resolve,
-                reject,
-            });
-        });
-    }
-    /**
-     * Deserializes a JSON representation of a scene graph element into a live
-     * element that is backed by this ModelKernel.
-     */
-    deserialize(type, serialized) {
-        const { id } = serialized;
-        // TODO: Add test to ensure that we don't double-deserialize elements
-        if (this[$elementsByLocalId].has(id)) {
-            return this[$elementsByLocalId].get(id);
-        }
-        const ElementConstructor = ThreeDOMElementMap[type];
-        if (ElementConstructor == null) {
-            throw new Error(`Cannot deserialize unknown type: ${type}`);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const element = new ElementConstructor(this, serialized);
-        this[$elementsByLocalId].set(id, element);
-        this[$localIdsByElement].set(element, id);
-        // We know that the all accepted types have been pre-populated in the
-        // [$elementsByType] map:
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        this[$elementsByType].get(type).add(element);
-        return element;
-    }
-    /**
-     * Look up all scene graph elements given a type string. Type strings
-     * are lower-cased, hyphenated versions of the constructor names of their
-     * corresponding classes. For example, a query for 'pbr-metallic-roughness'
-     * element types will yield the list of PBRMetallicRoughness elements in
-     * sparse tree order.
-     */
-    getElementsByType(type) {
-        if (!this[$elementsByType].has(type)) {
-            return [];
-        }
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return Array.from(this[$elementsByType].get(type));
-    }
-    /**
-     * Deactivate the ModelKernel. This has the effect of blocking all future
-     * mutations to the scene graph. Once deactivated, a ModelKernel cannot be
-     * reactivated.
-     *
-     * The ModelKernel should be deactivated before it is disposed of, or else
-     * it will leak in memory.
-     */
-    deactivate() {
-        this[$port].close();
-        this[$port].removeEventListener('message', this[$onMessageEvent]);
-    }
-}
-_a$i = $elementsByLocalId, _b$e = $localIdsByElement, _c$5 = $elementsByType, _d$3 = $pendingMutations, _e$2 = $nextMutationId, _f$2 = $onMessageEvent;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$j;
-const $modelGraft = Symbol('modelGraft');
-const $port$1 = Symbol('port');
-const $onMessageEvent$1 = Symbol('onMessageEvent');
-/**
- * A ModelGraftManipulator is an internal construct intended to consolidate
- * any mutations that operate on the backing scene graph. It can be thought
- * of as a host execution context counterpart to the ModelKernel in the scene
- * graph execution context.
- */
-class ModelGraftManipulator {
-    constructor(modelGraft, port) {
-        this[_a$j] = async (event) => {
-            const { data } = event;
-            if (data && data.type) {
-                if (data.type === ThreeDOMMessageType.MUTATE) {
-                    let applied = false;
-                    const { mutationId } = data;
-                    try {
-                        await this[$modelGraft].mutate(data.id, data.property, data.value);
-                        applied = true;
-                    }
-                    finally {
-                        this[$port$1].postMessage({ type: ThreeDOMMessageType.MUTATION_RESULT, applied, mutationId });
-                    }
-                }
-            }
-        };
-        this[$modelGraft] = modelGraft;
-        this[$port$1] = port;
-        this[$port$1].addEventListener('message', this[$onMessageEvent$1]);
-        this[$port$1].start();
-    }
-    /**
-     * Clean up internal state so that the ModelGraftManipulator can be properly
-     * garbage collected.
-     */
-    dispose() {
-        this[$port$1].removeEventListener('message', this[$onMessageEvent$1]);
-        this[$port$1].close();
-    }
-}
-_a$j = $onMessageEvent$1;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/**
- * Produces a "locally" unique ID. This ID is only guaranteed to be unique
- * over the lifetime of the function and in the current execution context.
- */
-const getLocallyUniqueId = (() => {
-    let id = 0;
-    return () => id++;
-})();
-const $callbacks = Symbol('callbacks');
-const $visitMesh = Symbol('visitMesh');
-const $visitElement = Symbol('visitElement');
-const $visitNode = Symbol('visitNode');
-const $visitScene = Symbol('visitScene');
-const $visitMaterial = Symbol('visitMaterial');
-/**
- * GLTFTreeVisitor implements a deterministic traversal order of a valid,
- * deserialized glTF 2.0 model. It supports selective element visitation via
- * callbacks configured based on element type. For example, to visit all
- * materials in all scenes in a glTF:
- *
- * ```javascript
- * const visitor = new GLTFTreeVisitor({
- *   material: (material, index, hierarchy) => {
- *     // material is a glTF 2.0 Material
- *     // index is the index of material in gltf.materials
- *     // hierarchy includes ancestors of material in the glTF
- *   }
- * });
- *
- * visitor.visit(someInMemoryGLTF, { allScenes: true });
- * ```
- *
- * The traversal order of the visitor is pre-order, depth-first.
- *
- * Note that the traversal order is not guaranteed to correspond to the
- * index of a given element in any way. Rather, traversal order is based
- * on the hierarchical order of the scene graph.
- */
-class GLTFTreeVisitor {
-    constructor(callbacks) {
-        this[$callbacks] = callbacks;
-    }
-    /**
-     * Visit a given in-memory glTF via the configured callbacks of this visitor.
-     * Optionally, all scenes may be visited (as opposed to just the active one).
-     * Sparse traversal can also be specified, in which case elements that
-     * re-appear multiple times in the scene graph will only be visited once.
-     */
-    visit(gltf, options = {}) {
-        const allScenes = !!options.allScenes;
-        const sparse = !!options.sparse;
-        const scenes = allScenes ?
-            gltf.scenes || [] :
-            (gltf.scenes && gltf.scene != null) ? [gltf.scenes[gltf.scene]] : [];
-        const state = { hierarchy: [], visited: new Set(), sparse, gltf };
-        for (const scene of scenes) {
-            this[$visitScene](gltf.scenes.indexOf(scene), state);
-        }
-    }
-    [$visitElement](index, elementList, state, visit, traverse) {
-        if (elementList == null) {
-            return;
-        }
-        const element = elementList[index];
-        const { sparse, hierarchy, visited } = state;
-        if (element == null) {
-            return;
-        }
-        if (sparse && visited.has(element)) {
-            return;
-        }
-        visited.add(element);
-        hierarchy.push(element);
-        if (visit != null) {
-            visit(element, index, hierarchy);
-        }
-        if (traverse != null) {
-            traverse(element);
-        }
-        hierarchy.pop();
-    }
-    [$visitScene](index, state) {
-        const { gltf } = state;
-        const { scene: visit } = this[$callbacks];
-        this[$visitElement](index, gltf.scenes, state, visit, (scene) => {
-            // A scene is not required to have a list of nodes
-            if (scene.nodes == null) {
-                return;
-            }
-            for (const nodeIndex of scene.nodes) {
-                this[$visitNode](nodeIndex, state);
-            }
-        });
-    }
-    [$visitNode](index, state) {
-        const { gltf } = state;
-        const { node: visit } = this[$callbacks];
-        this[$visitElement](index, gltf.nodes, state, visit, (node) => {
-            if (node.mesh != null) {
-                this[$visitMesh](node.mesh, state);
-            }
-            if (node.children != null) {
-                for (const childNodeIndex of node.children) {
-                    this[$visitNode](childNodeIndex, state);
-                }
-            }
-        });
-    }
-    [$visitMesh](index, state) {
-        const { gltf } = state;
-        const { mesh: visit } = this[$callbacks];
-        this[$visitElement](index, gltf.meshes, state, visit, (mesh) => {
-            for (const primitive of mesh.primitives) {
-                if (primitive.material != null) {
-                    this[$visitMaterial](primitive.material, state);
-                }
-            }
-        });
-    }
-    [$visitMaterial](index, state) {
-        const { gltf } = state;
-        const { material: visit } = this[$callbacks];
-        this[$visitElement](index, gltf.materials, state, visit);
-    }
-}
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$k;
-const $correlatedObjects = Symbol('correlatedObjects');
-const $sourceObject = Symbol('sourceObject');
-const $graft = Symbol('graft');
-const $id = Symbol('id');
-/**
- * A SerializableThreeDOMElement is the common primitive of all scene graph
- * elements that have been facaded in the host execution context. It adds
- * a common interface to these elements in support of convenient
- * serializability.
- */
-class ThreeDOMElement$1 {
-    constructor(graft, element, correlatedObjects = null) {
-        this[_a$k] = getLocallyUniqueId();
-        this[$graft] = graft;
-        this[$sourceObject] = element;
-        this[$correlatedObjects] = correlatedObjects;
-        graft.adopt(this);
-    }
-    /**
-     * The Model of provenance for this scene graph element.
-     */
-    get ownerModel() {
-        return this[$graft].model;
-    }
-    /**
-     * The unique ID that marks this element. In generally, an ID should only be
-     * considered unique to the element in the context of its scene graph. These
-     * IDs are not guaranteed to be stable across script executions.
-     */
-    get internalID() {
-        return this[$id];
-    }
-    /**
-     * Some (but not all) scene graph elements may have an optional name. The
-     * Object3D.prototype.name property is sometimes auto-generated by Three.js.
-     * We only want to expose a name that is set in the source glTF, so Three.js
-     * generated names are ignored.
-     */
-    get name() {
-        return this[$sourceObject].name || null;
-    }
-    /**
-     * The backing Three.js scene graph construct for this element.
-     */
-    get correlatedObjects() {
-        return this[$correlatedObjects];
-    }
-    /**
-     * The canonical GLTF or GLTFElement represented by this facade.
-     */
-    get sourceObject() {
-        return this[$sourceObject];
-    }
-    /**
-     * Mutate a property of the scene graph element. Returns a promise that
-     * resolves when the mutation has been successfully applied.
-     */
-    mutate(_property, _value) {
-        throw new Error('Mutation not implemented for this element');
-    }
-    /**
-     * Serialize the element in order to share it with a worker context.
-     */
-    toJSON() {
-        const serialized = { id: this[$id] };
-        const { name } = this;
-        if (name != null) {
-            serialized.name = name;
-        }
-        return serialized;
-    }
-}
-_a$k = $id;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$l;
-const loader = new ImageLoader();
-const $threeTextures = Symbol('threeTextures');
-const $bufferViewImages = Symbol('bufferViewImages');
-/**
- * Image facade implementation for Three.js textures
- */
-class Image$1 extends ThreeDOMElement$1 {
-    constructor(graft, image, correlatedTextures) {
-        super(graft, image, correlatedTextures);
-        this[_a$l] = new WeakMap();
-        if (image.bufferView != null) {
-            for (const texture of correlatedTextures) {
-                this[$bufferViewImages].set(texture, texture.image);
-            }
-        }
-    }
-    get [$threeTextures]() {
-        return this[$correlatedObjects];
-    }
-    async mutate(property, value) {
-        let image = null;
-        if (property !== 'uri') {
-            throw new Error(`Cannot configure property "${property}" on Image`);
-        }
-        if (value != null) {
-            image = await new Promise((resolve, reject) => {
-                loader.load(value, resolve, undefined, reject);
-            });
-        }
-        for (const texture of this[$threeTextures]) {
-            // If the URI is set to null but the Image had an associated buffer view
-            // (this would happen if it started out as embedded), then fall back to
-            // the cached object URL created by GLTFLoader:
-            if (image == null &&
-                this.sourceObject.bufferView != null) {
-                texture.image = this[$bufferViewImages].get(texture);
-            }
-            else {
-                texture.image = image;
-            }
-            texture.needsUpdate = true;
-        }
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        const { uri } = this.sourceObject;
-        if (uri != null) {
-            serialized.uri = uri;
-        }
-        return serialized;
-    }
-}
-_a$l = $bufferViewImages;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-const isMinFilter = (() => {
-    const minFilterValues = [9728, 9729, 9984, 9985, 9986, 9987];
-    return (value) => minFilterValues.indexOf(value) > -1;
-})();
-const isMagFilter = (() => {
-    const magFilterValues = [9728, 9729];
-    return (value) => magFilterValues.indexOf(value) > -1;
-})();
-const isWrapMode = (() => {
-    const wrapModes = [33071, 33648, 10497];
-    return (value) => wrapModes.indexOf(value) > -1;
-})();
-const isValidSamplerValue = (property, value) => {
-    switch (property) {
-        case 'minFilter':
-            return isMinFilter(value);
-        case 'magFilter':
-            return isMagFilter(value);
-        case 'wrapS':
-        case 'wrapT':
-            return isWrapMode(value);
-        default:
-            throw new Error(`Cannot configure property "${property}" on Sampler`);
-    }
-};
-// These defaults represent a convergence of glTF defaults for wrap mode and
-// Three.js defaults for filters. Per glTF 2.0 spec, a renderer may choose its
-// own defaults for filters.
-// @see https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#reference-sampler
-// @see https://threejs.org/docs/#api/en/textures/Texture
-const defaultValues = {
-    minFilter: 9987,
-    magFilter: 9729,
-    wrapS: 10497,
-    wrapT: 10497,
-};
-const $threeTextures$1 = Symbol('threeTextures');
-/**
- * Sampler facade implementation for Three.js textures
- */
-class Sampler$1 extends ThreeDOMElement$1 {
-    get [$threeTextures$1]() {
-        return this[$correlatedObjects];
-    }
-    constructor(graft, sampler, correlatedTextures) {
-        super(graft, sampler, correlatedTextures);
-    }
-    async mutate(property, value) {
-        const sampler = this.sourceObject;
-        if (value != null) {
-            if (isValidSamplerValue(property, value)) {
-                sampler[property] = value;
-                for (const texture of this[$threeTextures$1]) {
-                    texture[property] = value;
-                    texture.needsUpdate = true;
-                }
-            }
-        }
-        else if (property in sampler) {
-            delete sampler[property];
-            for (const texture of this[$threeTextures$1]) {
-                texture[property] = defaultValues[property];
-                texture.needsUpdate = true;
-            }
-        }
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        const { minFilter, magFilter, wrapS, wrapT } = this.sourceObject;
-        if (minFilter != null) {
-            serialized.minFilter = minFilter;
-        }
-        if (magFilter != null) {
-            serialized.magFilter = magFilter;
-        }
-        if (wrapS !== 10497) {
-            serialized.wrapS = wrapS;
-        }
-        if (wrapT !== 10497) {
-            serialized.wrapT = wrapT;
-        }
-        return serialized;
-    }
-}
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$m, _b$f;
-const $source$1 = Symbol('source');
-const $sampler$1 = Symbol('sampler');
-/**
- * Material facade implementation for Three.js materials
- */
-class Texture$2 extends ThreeDOMElement$1 {
-    constructor(graft, texture, correlatedTextures) {
-        super(graft, texture, correlatedTextures);
-        this[_a$m] = null;
-        this[_b$f] = null;
-        const glTF = graft.correlatedSceneGraph.gltf;
-        const { sampler: samplerIndex, source: imageIndex } = texture;
-        if (samplerIndex != null) {
-            const sampler = glTF.samplers && glTF.samplers[samplerIndex];
-            if (sampler != null) {
-                this[$sampler$1] = new Sampler$1(graft, sampler, correlatedTextures);
-            }
-        }
-        if (imageIndex != null) {
-            const image = glTF.images && glTF.images[imageIndex];
-            if (image != null) {
-                this[$source$1] = new Image$1(graft, image, correlatedTextures);
-            }
-        }
-    }
-    get sampler() {
-        return this[$sampler$1];
-    }
-    get source() {
-        return this[$source$1];
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        const { sampler, source } = this;
-        if (sampler != null) {
-            serialized.sampler = sampler.toJSON();
-        }
-        if (source != null) {
-            serialized.source = source.toJSON();
-        }
-        return serialized;
-    }
-}
-_a$m = $source$1, _b$f = $sampler$1;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$n;
-const $texture$1 = Symbol('texture');
-/**
- * TextureInfo facade implementation for Three.js materials
- */
-class TextureInfo$1 extends ThreeDOMElement$1 {
-    constructor(graft, textureInfo, correlatedTextures) {
-        super(graft, textureInfo, correlatedTextures);
-        this[_a$n] = null;
-        const glTF = graft.correlatedSceneGraph.gltf;
-        const { index: textureIndex } = textureInfo;
-        const texture = textureIndex != null && glTF.textures != null ?
-            glTF.textures[textureIndex] :
-            null;
-        if (texture != null) {
-            this[$texture$1] = new Texture$2(graft, texture, correlatedTextures);
-        }
-    }
-    get texture() {
-        return this[$texture$1];
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        const { texture } = this;
-        if (texture != null) {
-            serialized.texture = texture.toJSON();
-        }
-        return serialized;
-    }
-}
-_a$n = $texture$1;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$o, _b$g;
-const $threeMaterials = Symbol('threeMaterials');
-const $baseColorTexture$1 = Symbol('baseColorTexture');
-const $metallicRoughnessTexture$1 = Symbol('metallicRoughnessTexture');
-/**
- * PBR material properties facade implementation for Three.js materials
- */
-class PBRMetallicRoughness$1 extends ThreeDOMElement$1 {
-    constructor(graft, pbrMetallicRoughness, correlatedMaterials) {
-        super(graft, pbrMetallicRoughness, correlatedMaterials);
-        this[_a$o] = null;
-        this[_b$g] = null;
-        const { baseColorTexture, metallicRoughnessTexture } = pbrMetallicRoughness;
-        const baseColorTextures = new Set();
-        const metallicRoughnessTextures = new Set();
-        for (const material of correlatedMaterials) {
-            if (baseColorTexture != null && material.map != null) {
-                baseColorTextures.add(material.map);
-            }
-            // NOTE: GLTFLoader users the same texture for metalnessMap and
-            // roughnessMap in this case
-            // @see https://github.com/mrdoob/three.js/blob/b4473c25816df4a09405c7d887d5c418ef47ee76/examples/js/loaders/GLTFLoader.js#L2173-L2174
-            if (metallicRoughnessTexture != null && material.metalnessMap != null) {
-                metallicRoughnessTextures.add(material.metalnessMap);
-            }
-        }
-        if (baseColorTextures.size > 0) {
-            this[$baseColorTexture$1] =
-                new TextureInfo$1(graft, baseColorTexture, baseColorTextures);
-        }
-        if (metallicRoughnessTextures.size > 0) {
-            this[$metallicRoughnessTexture$1] = new TextureInfo$1(graft, metallicRoughnessTexture, metallicRoughnessTextures);
-        }
-    }
-    get [(_a$o = $baseColorTexture$1, _b$g = $metallicRoughnessTexture$1, $threeMaterials)]() {
-        return this[$correlatedObjects];
-    }
-    get baseColorFactor() {
-        return this.sourceObject.baseColorFactor ||
-            [1, 1, 1, 1];
-    }
-    get metallicFactor() {
-        return this.sourceObject.metallicFactor || 0;
-    }
-    get roughnessFactor() {
-        return this.sourceObject.roughnessFactor || 0;
-    }
-    get baseColorTexture() {
-        return this[$baseColorTexture$1];
-    }
-    get metallicRoughnessTexture() {
-        return this[$metallicRoughnessTexture$1];
-    }
-    async mutate(property, value) {
-        if (!['baseColorFactor', 'metallicFactor', 'roughnessFactor'].includes(property)) {
-            throw new Error(`Cannot mutate ${property} on PBRMetallicRoughness`);
-        }
-        switch (property) {
-            case 'baseColorFactor':
-                for (const material of this[$threeMaterials]) {
-                    material.color.fromArray(value);
-                    material.opacity = value[3];
-                    const pbrMetallicRoughness = this[$sourceObject];
-                    if (value === 1 && value === 1 &&
-                        value === 1 && value === 1) {
-                        delete pbrMetallicRoughness.baseColorFactor;
-                    }
-                    else {
-                        pbrMetallicRoughness.baseColorFactor = value;
-                    }
-                }
-                break;
-            case 'metallicFactor':
-                for (const material of this[$threeMaterials]) {
-                    material.metalness = value;
-                    const pbrMetallicRoughness = this[$sourceObject];
-                    pbrMetallicRoughness.metallicFactor = value;
-                }
-                break;
-            case 'roughnessFactor':
-                for (const material of this[$threeMaterials]) {
-                    material.roughness = value;
-                    const pbrMetallicRoughness = this[$sourceObject];
-                    pbrMetallicRoughness.roughnessFactor = value;
-                }
-                break;
-        }
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        const { baseColorTexture, metallicRoughnessTexture, baseColorFactor, roughnessFactor, metallicFactor } = this;
-        if (baseColorTexture != null) {
-            serialized.baseColorTexture = baseColorTexture.toJSON();
-        }
-        if (baseColorFactor != null) {
-            serialized.baseColorFactor = baseColorFactor;
-        }
-        if (metallicFactor != null) {
-            serialized.metallicFactor = metallicFactor;
-        }
-        if (roughnessFactor != null) {
-            serialized.roughnessFactor = roughnessFactor;
-        }
-        if (metallicRoughnessTexture != null) {
-            serialized.metallicRoughnessTexture = metallicRoughnessTexture.toJSON();
-        }
-        return serialized;
-    }
-}
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$p, _b$h, _c$6, _d$4;
-const $pbrMetallicRoughness$1 = Symbol('pbrMetallicRoughness');
-const $normalTexture$1 = Symbol('normalTexture');
-const $occlusionTexture$1 = Symbol('occlusionTexture');
-const $emissiveTexture$1 = Symbol('emissiveTexture');
-/**
- * Material facade implementation for Three.js materials
- */
-class Material$2 extends ThreeDOMElement$1 {
-    constructor(graft, material, correlatedMaterials) {
-        super(graft, material, correlatedMaterials);
-        this[_a$p] = null;
-        this[_b$h] = null;
-        this[_c$6] = null;
-        this[_d$4] = null;
-        const { pbrMetallicRoughness, normalTexture, occlusionTexture, emissiveTexture } = material;
-        if (pbrMetallicRoughness != null) {
-            this[$pbrMetallicRoughness$1] = new PBRMetallicRoughness$1(graft, pbrMetallicRoughness, correlatedMaterials);
-        }
-        const normalTextures = new Set();
-        const occlusionTextures = new Set();
-        const emissiveTextures = new Set();
-        for (const material of correlatedMaterials) {
-            const { normalMap, aoMap, emissiveMap } = material;
-            if (normalTexture != null && normalMap != null) {
-                normalTextures.add(normalMap);
-            }
-            if (occlusionTexture != null && aoMap != null) {
-                occlusionTextures.add(aoMap);
-            }
-            if (emissiveTexture != null && emissiveMap != null) {
-                emissiveTextures.add(emissiveMap);
-            }
-        }
-        if (normalTextures.size > 0) {
-            this[$normalTexture$1] =
-                new TextureInfo$1(graft, normalTexture, normalTextures);
-        }
-        if (occlusionTextures.size > 0) {
-            this[$occlusionTexture$1] =
-                new TextureInfo$1(graft, occlusionTexture, occlusionTextures);
-        }
-        if (emissiveTextures.size > 0) {
-            this[$emissiveTexture$1] =
-                new TextureInfo$1(graft, emissiveTexture, emissiveTextures);
-        }
-    }
-    get pbrMetallicRoughness() {
-        return this[$pbrMetallicRoughness$1];
-    }
-    get normalTexture() {
-        return this[$normalTexture$1];
-    }
-    get occlusionTexture() {
-        return this[$occlusionTexture$1];
-    }
-    get emissiveTexture() {
-        return this[$emissiveTexture$1];
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        const { pbrMetallicRoughness, normalTexture, occlusionTexture, emissiveTexture } = this;
-        if (pbrMetallicRoughness != null) {
-            serialized.pbrMetallicRoughness = pbrMetallicRoughness.toJSON();
-        }
-        if (normalTexture != null) {
-            serialized.normalTexture = normalTexture.toJSON();
-        }
-        if (occlusionTexture != null) {
-            serialized.occlusionTexture = occlusionTexture.toJSON();
-        }
-        if (emissiveTexture != null) {
-            serialized.emissiveTexture = emissiveTexture.toJSON();
-        }
-        return serialized;
-    }
-}
-_a$p = $pbrMetallicRoughness$1, _b$h = $normalTexture$1, _c$6 = $occlusionTexture$1, _d$4 = $emissiveTexture$1;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$q, _b$i;
-const $modelUri = Symbol('modelUri');
-const $materials$1 = Symbol('materials');
-/**
- * A Model facades the top-level GLTF object returned by Three.js' GLTFLoader.
- * Currently, the model only bothers itself with the materials in the Three.js
- * scene graph.
- */
-class Model$2 extends ThreeDOMElement$1 {
-    constructor(graft, modelUri, correlatedSceneGraph) {
-        super(graft, correlatedSceneGraph.gltf);
-        this[_a$q] = '';
-        this[_b$i] = [];
-        this[$modelUri] = modelUri;
-        const visitor = new GLTFTreeVisitor({
-            material: (material) => {
-                this[$materials$1].push(new Material$2(graft, material, correlatedSceneGraph.gltfElementMap.get(material)));
-            }
-        });
-        visitor.visit(correlatedSceneGraph.gltf, { sparse: true });
-    }
-    /**
-     * A flat list of all unique materials found in this scene graph. Materials
-     * are listed in the order they appear during pre-order, depth-first traveral
-     * of the scene graph.
-     *
-     * TODO(#1003): How do we handle non-active scenes?
-     * TODO(#1002): Desctibe and enforce traversal order
-     */
-    get materials() {
-        return this[$materials$1];
-    }
-    toJSON() {
-        const serialized = super.toJSON();
-        serialized.modelUri = this[$modelUri];
-        serialized.materials =
-            this[$materials$1].map((material) => material.toJSON());
-        return serialized;
-    }
-}
-_a$q = $modelUri, _b$i = $materials$1;
-
-/* @license
- * Copyright 2020 Google LLC. All Rights Reserved.
- * Licensed under the Apache License, Version 2.0 (the 'License');
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var _a$r, _b$j;
-const $model$1 = Symbol('model');
-const $correlatedSceneGraph$1 = Symbol('correlatedSceneGraph');
-const $elementsByInternalId = Symbol('elementsByInternalId');
-const $eventDelegate$1 = Symbol('eventDelegate');
-/**
- * ModelGraft
- *
- * This is a coordination primitive between a scene graph as represented by the
- * output for Three.js' GLTFLoader and a counterpart 3DOM facade. Since this is
- * the Three.js-specific implementation of the facade, the input is a GLTF-like
- * object whose keys refer to Three.js-specific constructs (e.g., gltf.scene is
- * a THREE.Scene).
- *
- * When created, the ModelGraft produces a Model that can be traversed and
- * manipulated to mutate the Three.js scene graph synchronously (but
- * indirectly). The benefit of this is that mutations to the Three.js scene can
- * be performed in a Three.js-agnostic fashion that is potentially portable to
- * alternative rendering backends.
- *
- * The scene graph representation produced by the ModelGraft is designed to
- * match the structures described in the glTF 2.0 spec as closely as possible.
- * Where there are deviations, it is usually for the purpose of making
- * synchronization easier, or else for ergonomics. For example, in glTF 2.0, the
- * graph is a series of flat arrays where nodes cross-reference each other by
- * index to represent hierarchy, but in a Model nodes have array members
- * containing refrences to their hierarchical children.
- *
- * An important goal of ModelGraft is to enable a scene in one JavaScript
- * context to be manipulated by script in a remote context, such as a distant
- * worker thread or even a different process. So, every node in the graph
- * is able to be serialized, and the serialized form includes an ID that is
- * locally unique to the ModelGraft instance that the node came from so that
- * the remote context can refer back to it. A ModelGraft can be thought of as
- * the host execution context counterpart to the ModelKernel in the scene graph
- * execution context.
- */
-class ModelGraft {
-    constructor(modelUri, correlatedSceneGraph) {
-        // NOTE(cdata): This eventDelegate hack is a quick trick to let us get the
-        // EventTarget interface without implementing or requiring a full polyfill. We
-        // should remove this once EventTarget is inheritable everywhere.
-        this[_a$r] = document.createDocumentFragment();
-        // NOTE(cdata): We declare each of these methods independently here so that we
-        // can inherit the correct types from EventTarget's interface. Maybe there is
-        // a better way to do this dynamically so that we don't repeat ourselves?
-        this.addEventListener = (...args) => this[$eventDelegate$1].addEventListener(...args);
-        this.removeEventListener = (...args) => this[$eventDelegate$1].removeEventListener(...args);
-        this.dispatchEvent = (...args) => this[$eventDelegate$1].dispatchEvent(...args);
-        this[_b$j] = new Map();
-        this[$correlatedSceneGraph$1] = correlatedSceneGraph;
-        this[$model$1] = new Model$2(this, modelUri, correlatedSceneGraph);
-    }
-    get correlatedSceneGraph() {
-        return this[$correlatedSceneGraph$1];
-    }
-    get model() {
-        return this[$model$1];
-    }
-    getElementByInternalId(id) {
-        const element = this[$elementsByInternalId].get(id);
-        if (element == null) {
-            return null;
-        }
-        return element;
-    }
-    adopt(element) {
-        this[$elementsByInternalId].set(element.internalID, element);
-    }
-    async mutate(id, property, value) {
-        const element = this.getElementByInternalId(id);
-        await element.mutate(property, value);
-        this.dispatchEvent(new CustomEvent('mutation', { detail: { element: element } }));
-    }
-}
-_a$r = $eventDelegate$1, _b$j = $elementsByInternalId;
-
 //------------------------------------------------------------------------------
 // Constants
 //------------------------------------------------------------------------------
+
 var WEBGL_CONSTANTS = {
 	POINTS: 0x0000,
 	LINES: 0x0001,
@@ -61998,6 +59249,8 @@ var WEBGL_CONSTANTS = {
 	MIRRORED_REPEAT: 33648,
 	REPEAT: 10497
 };
+
+var identityArray = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ];
 
 var THREE_TO_WEBGL = {};
 
@@ -62044,7 +59297,6 @@ GLTFExporter.prototype = {
 			embedImages: true,
 			maxTextureSize: Infinity,
 			animations: [],
-			forcePowerOfTwoTextures: false,
 			includeCustomExtensions: false
 		};
 
@@ -62061,8 +59313,8 @@ GLTFExporter.prototype = {
 
 			asset: {
 
-				version: "2.0",
-				generator: "GLTFExporter"
+				version: '2.0',
+				generator: 'THREE.GLTFExporter'
 
 			}
 
@@ -62121,6 +59373,18 @@ GLTFExporter.prototype = {
 		}
 
 		/**
+		 * Is identity matrix
+		 *
+		 * @param {Matrix4} matrix
+		 * @returns {Boolean} Returns true, if parameter is identity matrix
+		 */
+		function isIdentityMatrix( matrix ) {
+
+			return equalArray( matrix.elements, identityArray );
+
+		}
+
+		/**
 		 * Converts a string to an ArrayBuffer.
 		 * @param  {string} text
 		 * @return {ArrayBuffer}
@@ -62168,7 +59432,23 @@ GLTFExporter.prototype = {
 
 				for ( var a = 0; a < attribute.itemSize; a ++ ) {
 
-					var value = attribute.array[ i * attribute.itemSize + a ];
+					var value;
+
+					if ( attribute.itemSize > 4 ) {
+
+						 // no support for interleaved data for itemSize > 4
+
+						value = attribute.array[ i * attribute.itemSize + a ];
+
+					} else {
+
+						if ( a === 0 ) value = attribute.getX( i );
+						else if ( a === 1 ) value = attribute.getY( i );
+						else if ( a === 2 ) value = attribute.getZ( i );
+						else if ( a === 3 ) value = attribute.getW( i );
+
+					}
+
 					output.min[ a ] = Math.min( output.min[ a ], value );
 					output.max[ a ] = Math.max( output.max[ a ], value );
 
@@ -62177,19 +59457,6 @@ GLTFExporter.prototype = {
 			}
 
 			return output;
-
-		}
-
-		/**
-		 * Checks if image size is POT.
-		 *
-		 * @param {Image} image The image to be checked.
-		 * @returns {Boolean} Returns true if image size is POT.
-		 *
-		 */
-		function isPowerOfTwo( image ) {
-
-			return MathUtils.isPowerOfTwo( image.width ) && MathUtils.isPowerOfTwo( image.height );
 
 		}
 
@@ -62213,7 +59480,7 @@ GLTFExporter.prototype = {
 			for ( var i = 0, il = normal.count; i < il; i ++ ) {
 
 				// 0.0005 is from glTF-validator
-				if ( Math.abs( v.fromArray( normal.array, i * 3 ).length() - 1.0 ) > 0.0005 ) return false;
+				if ( Math.abs( v.fromBufferAttribute( normal, i ).length() - 1.0 ) > 0.0005 ) return false;
 
 			}
 
@@ -62242,7 +59509,7 @@ GLTFExporter.prototype = {
 
 			for ( var i = 0, il = attribute.count; i < il; i ++ ) {
 
-				v.fromArray( attribute.array, i * 3 );
+				v.fromBufferAttribute( attribute, i );
 
 				if ( v.x === 0 && v.y === 0 && v.z === 0 ) {
 
@@ -62255,7 +59522,7 @@ GLTFExporter.prototype = {
 
 				}
 
-				v.toArray( attribute.array, i * 3 );
+				attribute.setXYZ( i, v.x, v.y, v.z );
 
 			}
 
@@ -62586,7 +59853,7 @@ GLTFExporter.prototype = {
 		/**
 		 * Process attribute to generate an accessor
 		 * @param  {BufferAttribute} attribute Attribute to process
-		 * @param  {BufferGeometry} geometry (Optional) Geometry used for truncated draw range
+		 * @param  {THREE.BufferGeometry} geometry (Optional) Geometry used for truncated draw range
 		 * @param  {Integer} start (Optional)
 		 * @param  {Integer} count (Optional)
 		 * @return {Integer}           Index of the processed accessor on the "accessors" array
@@ -62700,7 +59967,7 @@ GLTFExporter.prototype = {
 		/**
 		 * Process image
 		 * @param  {Image} image to process
-		 * @param  {Integer} format of the image (e.g. THREE.RGBFormat, RGBAFormat etc)
+		 * @param  {Integer} format of the image (e.g. RGBFormat, RGBAFormat etc)
 		 * @param  {Boolean} flipY before writing out the image
 		 * @return {Integer}     Index of the processed texture in the "images" array
 		 */
@@ -62714,7 +59981,7 @@ GLTFExporter.prototype = {
 
 			var cachedImages = cachedData.images.get( image );
 			var mimeType = format === RGBAFormat ? 'image/png' : 'image/jpeg';
-			var key = mimeType + ":flipY/" + flipY.toString();
+			var key = mimeType + ':flipY/' + flipY.toString();
 
 			if ( cachedImages[ key ] !== undefined ) {
 
@@ -62737,15 +60004,6 @@ GLTFExporter.prototype = {
 				canvas.width = Math.min( image.width, options.maxTextureSize );
 				canvas.height = Math.min( image.height, options.maxTextureSize );
 
-				if ( options.forcePowerOfTwoTextures && ! isPowerOfTwo( canvas ) ) {
-
-					console.warn( 'GLTFExporter: Resized non-power-of-two image.', image );
-
-					canvas.width = MathUtils.floorPowerOfTwo( canvas.width );
-					canvas.height = MathUtils.floorPowerOfTwo( canvas.height );
-
-				}
-
 				var ctx = canvas.getContext( '2d' );
 
 				if ( flipY === true ) {
@@ -62755,7 +60013,47 @@ GLTFExporter.prototype = {
 
 				}
 
-				ctx.drawImage( image, 0, 0, canvas.width, canvas.height );
+				if ( ( typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement ) ||
+					( typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement ) ||
+					( typeof OffscreenCanvas !== 'undefined' && image instanceof OffscreenCanvas ) ||
+					( typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap ) ) {
+
+					ctx.drawImage( image, 0, 0, canvas.width, canvas.height );
+
+				} else {
+
+					if ( format !== RGBAFormat && format !== RGBFormat ) {
+
+						console.error( 'GLTFExporter: Only RGB and RGBA formats are supported.' );
+
+					}
+
+					if ( image.width > options.maxTextureSize || image.height > options.maxTextureSize ) {
+
+						console.warn( 'GLTFExporter: Image size is bigger than maxTextureSize', image );
+
+					}
+
+					let data = image.data;
+
+					if ( format === RGBFormat ) {
+
+						data = new Uint8ClampedArray( image.height * image.width * 4 );
+
+						for ( var i = 0, j = 0; i < data.length; i += 4, j += 3 ) {
+
+							data[ i + 0 ] = image.data[ j + 0 ];
+							data[ i + 1 ] = image.data[ j + 1 ];
+							data[ i + 2 ] = image.data[ j + 2 ];
+							data[ i + 3 ] = 255;
+
+						}
+
+					}
+
+					ctx.putImageData( new ImageData( data, image.width, image.height ), 0, 0 );
+
+				}
 
 				if ( options.binary === true ) {
 
@@ -63162,10 +60460,9 @@ GLTFExporter.prototype = {
 
 			}
 
-			if ( ! geometry.isBufferGeometry ) {
+			if ( geometry.isBufferGeometry !== true ) {
 
-				console.warn( 'GLTFExporter: Exporting THREE.Geometry will increase file size. Use BufferGeometry instead.' );
-				geometry = new BufferGeometry().setFromObject( mesh );
+				throw new Error( 'THREE.GLTFExporter: Geometry is not of type THREE.BufferGeometry.' );
 
 			}
 
@@ -63616,12 +60913,15 @@ GLTFExporter.prototype = {
 
 			var joints = [];
 			var inverseBindMatrices = new Float32Array( skeleton.bones.length * 16 );
+			var temporaryBoneInverse = new Matrix4();
 
 			for ( var i = 0; i < skeleton.bones.length; ++ i ) {
 
 				joints.push( nodeMap.get( skeleton.bones[ i ] ) );
 
-				skeleton.boneInverses[ i ].toArray( inverseBindMatrices, i * 16 );
+				temporaryBoneInverse.copy( skeleton.boneInverses[ i ] );
+
+				temporaryBoneInverse.multiply( object.bindMatrix ).toArray( inverseBindMatrices, i * 16 );
 
 			}
 
@@ -63745,7 +61045,7 @@ GLTFExporter.prototype = {
 
 				}
 
-				if ( ! equalArray( object.matrix.elements, [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ] ) ) {
+				if ( isIdentityMatrix( object.matrix ) === false ) {
 
 					gltfNode.matrix = object.matrix.elements;
 
@@ -64205,7 +61505,7 @@ GLTFExporter.Utils = {
 
 				// We need to take into consideration the intended target node
 				// of our original un-merged morphTarget animation.
-				mergedTrack.name = sourceTrackBinding.nodeName + '.morphTargetInfluences';
+				mergedTrack.name = ( sourceTrackBinding.nodeName || '' ) + '.morphTargetInfluences';
 				mergedTrack.values = values;
 
 				mergedTracks[ sourceTrackNode.uuid ] = mergedTrack;
@@ -64261,156 +61561,632 @@ GLTFExporter.Utils = {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const $correlatedObjects = Symbol('correlatedObjects');
+const $sourceObject = Symbol('sourceObject');
+const $onUpdate = Symbol('onUpdate');
+/**
+ * A SerializableThreeDOMElement is the common primitive of all scene graph
+ * elements that have been facaded in the host execution context. It adds
+ * a common interface to these elements in support of convenient
+ * serializability.
+ */
+class ThreeDOMElement {
+    constructor(onUpdate, element, correlatedObjects = null) {
+        this[$onUpdate] = onUpdate;
+        this[$sourceObject] = element;
+        this[$correlatedObjects] = correlatedObjects;
+    }
+}
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var _a$9, _b$7;
+const loader = new ImageLoader();
+const $threeTextures = Symbol('threeTextures');
+const $uri = Symbol('uri');
+const $bufferViewImages = Symbol('bufferViewImages');
+/**
+ * Image facade implementation for Three.js textures
+ */
+class Image$1 extends ThreeDOMElement {
+    constructor(onUpdate, image, correlatedTextures) {
+        super(onUpdate, image, correlatedTextures);
+        this[_a$9] = undefined;
+        this[_b$7] = new WeakMap();
+        if (image.uri != null) {
+            this[$uri] = image.uri;
+        }
+        if (image.bufferView != null) {
+            for (const texture of correlatedTextures) {
+                this[$bufferViewImages].set(texture, texture.image);
+            }
+        }
+    }
+    get [$threeTextures]() {
+        return this[$correlatedObjects];
+    }
+    get name() {
+        return this[$sourceObject].name || '';
+    }
+    get uri() {
+        return this[$uri];
+    }
+    get type() {
+        return this.uri != null ? 'external' : 'embedded';
+    }
+    async setURI(uri) {
+        this[$uri] = uri;
+        const image = await new Promise((resolve, reject) => {
+            loader.load(uri, resolve, undefined, reject);
+        });
+        for (const texture of this[$threeTextures]) {
+            // If the URI is set to null but the Image had an associated buffer view
+            // (this would happen if it started out as embedded), then fall back to
+            // the cached object URL created by GLTFLoader:
+            if (image == null &&
+                this[$sourceObject].bufferView != null) {
+                texture.image = this[$bufferViewImages].get(texture);
+            }
+            else {
+                texture.image = image;
+            }
+            texture.needsUpdate = true;
+        }
+        this[$onUpdate]();
+    }
+}
+_a$9 = $uri, _b$7 = $bufferViewImages;
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+const isMinFilter = (() => {
+    const minFilterValues = [9728, 9729, 9984, 9985, 9986, 9987];
+    return (value) => minFilterValues.indexOf(value) > -1;
+})();
+const isMagFilter = (() => {
+    const magFilterValues = [9728, 9729];
+    return (value) => magFilterValues.indexOf(value) > -1;
+})();
+const isWrapMode = (() => {
+    const wrapModes = [33071, 33648, 10497];
+    return (value) => wrapModes.indexOf(value) > -1;
+})();
+const isValidSamplerValue = (property, value) => {
+    switch (property) {
+        case 'minFilter':
+            return isMinFilter(value);
+        case 'magFilter':
+            return isMagFilter(value);
+        case 'wrapS':
+        case 'wrapT':
+            return isWrapMode(value);
+        default:
+            throw new Error(`Cannot configure property "${property}" on Sampler`);
+    }
+};
+const $threeTextures$1 = Symbol('threeTextures');
+const $setProperty = Symbol('setProperty');
+/**
+ * Sampler facade implementation for Three.js textures
+ */
+class Sampler extends ThreeDOMElement {
+    get [$threeTextures$1]() {
+        return this[$correlatedObjects];
+    }
+    constructor(onUpdate, sampler, correlatedTextures) {
+        // These defaults represent a convergence of glTF defaults for wrap mode and
+        // Three.js defaults for filters. Per glTF 2.0 spec, a renderer may choose
+        // its own defaults for filters.
+        // @see https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#reference-sampler
+        // @see https://threejs.org/docs/#api/en/textures/Texture
+        if (sampler.minFilter == null) {
+            sampler.minFilter = 9987;
+        }
+        if (sampler.magFilter == null) {
+            sampler.magFilter = 9729;
+        }
+        if (sampler.wrapS == null) {
+            sampler.wrapS = 10497;
+        }
+        if (sampler.wrapT == null) {
+            sampler.wrapT = 10497;
+        }
+        super(onUpdate, sampler, correlatedTextures);
+    }
+    get name() {
+        return this[$sourceObject].name || '';
+    }
+    get minFilter() {
+        return this[$sourceObject].minFilter;
+    }
+    get magFilter() {
+        return this[$sourceObject].magFilter;
+    }
+    get wrapS() {
+        return this[$sourceObject].wrapS;
+    }
+    get wrapT() {
+        return this[$sourceObject].wrapT;
+    }
+    setMinFilter(filter) {
+        this[$setProperty]('minFilter', filter);
+    }
+    setMagFilter(filter) {
+        this[$setProperty]('magFilter', filter);
+    }
+    setWrapS(mode) {
+        this[$setProperty]('wrapS', mode);
+    }
+    setWrapT(mode) {
+        this[$setProperty]('wrapT', mode);
+    }
+    [$setProperty](property, value) {
+        const sampler = this[$sourceObject];
+        if (isValidSamplerValue(property, value)) {
+            sampler[property] = value;
+            for (const texture of this[$threeTextures$1]) {
+                texture[property] = value;
+                texture.needsUpdate = true;
+            }
+        }
+        this[$onUpdate]();
+    }
+}
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+const $source = Symbol('source');
+const $sampler = Symbol('sampler');
+/**
+ * Material facade implementation for Three.js materials
+ */
+class Texture$1 extends ThreeDOMElement {
+    constructor(onUpdate, gltf, texture, correlatedTextures) {
+        super(onUpdate, texture, correlatedTextures);
+        const { sampler: samplerIndex, source: imageIndex } = texture;
+        const sampler = (gltf.samplers != null && samplerIndex != null) ?
+            gltf.samplers[samplerIndex] :
+            {};
+        this[$sampler] = new Sampler(onUpdate, sampler, correlatedTextures);
+        if (gltf.images != null && imageIndex != null) {
+            const image = gltf.images[imageIndex];
+            if (image != null) {
+                this[$source] = new Image$1(onUpdate, image, correlatedTextures);
+            }
+        }
+    }
+    get name() {
+        return this[$sourceObject].name || '';
+    }
+    get sampler() {
+        return this[$sampler];
+    }
+    get source() {
+        return this[$source];
+    }
+}
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+const $texture = Symbol('texture');
+/**
+ * TextureInfo facade implementation for Three.js materials
+ */
+class TextureInfo extends ThreeDOMElement {
+    constructor(onUpdate, gltf, textureInfo, correlatedTextures) {
+        super(onUpdate, textureInfo, correlatedTextures);
+        const { index: textureIndex } = textureInfo;
+        const texture = gltf.textures[textureIndex];
+        if (texture != null) {
+            this[$texture] = new Texture$1(onUpdate, gltf, texture, correlatedTextures);
+        }
+    }
+    get texture() {
+        return this[$texture];
+    }
+}
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var _a$a, _b$8;
+const $threeMaterials = Symbol('threeMaterials');
+const $baseColorTexture = Symbol('baseColorTexture');
+const $metallicRoughnessTexture = Symbol('metallicRoughnessTexture');
+/**
+ * PBR material properties facade implementation for Three.js materials
+ */
+class PBRMetallicRoughness extends ThreeDOMElement {
+    constructor(onUpdate, gltf, pbrMetallicRoughness, correlatedMaterials) {
+        super(onUpdate, pbrMetallicRoughness, correlatedMaterials);
+        this[_a$a] = null;
+        this[_b$8] = null;
+        // Assign glTF default values
+        if (pbrMetallicRoughness.baseColorFactor == null) {
+            pbrMetallicRoughness.baseColorFactor = [1, 1, 1, 1];
+        }
+        if (pbrMetallicRoughness.roughnessFactor == null) {
+            pbrMetallicRoughness.roughnessFactor = 0;
+        }
+        if (pbrMetallicRoughness.metallicFactor == null) {
+            pbrMetallicRoughness.metallicFactor = 0;
+        }
+        const { baseColorTexture, metallicRoughnessTexture } = pbrMetallicRoughness;
+        const baseColorTextures = new Set();
+        const metallicRoughnessTextures = new Set();
+        for (const material of correlatedMaterials) {
+            if (baseColorTexture != null && material.map != null) {
+                baseColorTextures.add(material.map);
+            }
+            // NOTE: GLTFLoader users the same texture for metalnessMap and
+            // roughnessMap in this case
+            // @see https://github.com/mrdoob/three.js/blob/b4473c25816df4a09405c7d887d5c418ef47ee76/examples/js/loaders/GLTFLoader.js#L2173-L2174
+            if (metallicRoughnessTexture != null && material.metalnessMap != null) {
+                metallicRoughnessTextures.add(material.metalnessMap);
+            }
+        }
+        if (baseColorTextures.size > 0) {
+            this[$baseColorTexture] =
+                new TextureInfo(onUpdate, gltf, baseColorTexture, baseColorTextures);
+        }
+        if (metallicRoughnessTextures.size > 0) {
+            this[$metallicRoughnessTexture] = new TextureInfo(onUpdate, gltf, metallicRoughnessTexture, metallicRoughnessTextures);
+        }
+    }
+    get [(_a$a = $baseColorTexture, _b$8 = $metallicRoughnessTexture, $threeMaterials)]() {
+        return this[$correlatedObjects];
+    }
+    get baseColorFactor() {
+        return this[$sourceObject].baseColorFactor;
+    }
+    get metallicFactor() {
+        return this[$sourceObject].metallicFactor;
+    }
+    get roughnessFactor() {
+        return this[$sourceObject].roughnessFactor;
+    }
+    get baseColorTexture() {
+        return this[$baseColorTexture];
+    }
+    get metallicRoughnessTexture() {
+        return this[$metallicRoughnessTexture];
+    }
+    setBaseColorFactor(rgba) {
+        for (const material of this[$threeMaterials]) {
+            material.color.fromArray(rgba);
+            material.opacity = (rgba)[3];
+        }
+        const pbrMetallicRoughness = this[$sourceObject];
+        pbrMetallicRoughness.baseColorFactor = rgba;
+        this[$onUpdate]();
+    }
+    setMetallicFactor(value) {
+        for (const material of this[$threeMaterials]) {
+            material.metalness = value;
+        }
+        const pbrMetallicRoughness = this[$sourceObject];
+        pbrMetallicRoughness.metallicFactor = value;
+        this[$onUpdate]();
+    }
+    setRoughnessFactor(value) {
+        for (const material of this[$threeMaterials]) {
+            material.roughness = value;
+        }
+        const pbrMetallicRoughness = this[$sourceObject];
+        pbrMetallicRoughness.roughnessFactor = value;
+        this[$onUpdate]();
+    }
+}
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var _a$b, _b$9, _c$3;
+const $pbrMetallicRoughness = Symbol('pbrMetallicRoughness');
+const $normalTexture = Symbol('normalTexture');
+const $occlusionTexture = Symbol('occlusionTexture');
+const $emissiveTexture = Symbol('emissiveTexture');
+/**
+ * Material facade implementation for Three.js materials
+ */
+class Material$1 extends ThreeDOMElement {
+    constructor(onUpdate, gltf, material, correlatedMaterials) {
+        super(onUpdate, material, correlatedMaterials);
+        this[_a$b] = null;
+        this[_b$9] = null;
+        this[_c$3] = null;
+        if (correlatedMaterials == null) {
+            return;
+        }
+        if (material.pbrMetallicRoughness == null) {
+            material.pbrMetallicRoughness = {};
+        }
+        this[$pbrMetallicRoughness] = new PBRMetallicRoughness(onUpdate, gltf, material.pbrMetallicRoughness, correlatedMaterials);
+        const { normalTexture, occlusionTexture, emissiveTexture } = material;
+        const normalTextures = new Set();
+        const occlusionTextures = new Set();
+        const emissiveTextures = new Set();
+        for (const material of correlatedMaterials) {
+            const { normalMap, aoMap, emissiveMap } = material;
+            if (normalTexture != null && normalMap != null) {
+                normalTextures.add(normalMap);
+            }
+            if (occlusionTexture != null && aoMap != null) {
+                occlusionTextures.add(aoMap);
+            }
+            if (emissiveTexture != null && emissiveMap != null) {
+                emissiveTextures.add(emissiveMap);
+            }
+        }
+        if (normalTextures.size > 0) {
+            this[$normalTexture] =
+                new TextureInfo(onUpdate, gltf, normalTexture, normalTextures);
+        }
+        if (occlusionTextures.size > 0) {
+            this[$occlusionTexture] =
+                new TextureInfo(onUpdate, gltf, occlusionTexture, occlusionTextures);
+        }
+        if (emissiveTextures.size > 0) {
+            this[$emissiveTexture] =
+                new TextureInfo(onUpdate, gltf, emissiveTexture, emissiveTextures);
+        }
+    }
+    get name() {
+        return this[$sourceObject].name || '';
+    }
+    get pbrMetallicRoughness() {
+        return this[$pbrMetallicRoughness];
+    }
+    get normalTexture() {
+        return this[$normalTexture];
+    }
+    get occlusionTexture() {
+        return this[$occlusionTexture];
+    }
+    get emissiveTexture() {
+        return this[$emissiveTexture];
+    }
+    get emissiveFactor() {
+        return this[$sourceObject].emissiveFactor;
+    }
+    setEmissiveFactor(rgb) {
+        for (const material of this[$correlatedObjects]) {
+            material.emissive.fromArray(rgb);
+        }
+        this[$sourceObject].emissiveFactor = rgb;
+        this[$onUpdate]();
+    }
+}
+_a$b = $normalTexture, _b$9 = $occlusionTexture, _c$3 = $emissiveTexture;
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var _a$c;
+const $materials = Symbol('materials');
+/**
+ * A Model facades the top-level GLTF object returned by Three.js' GLTFLoader.
+ * Currently, the model only bothers itself with the materials in the Three.js
+ * scene graph.
+ */
+class Model {
+    constructor(correlatedSceneGraph, onUpdate = () => { }) {
+        this[_a$c] = [];
+        const { gltf, gltfElementMap } = correlatedSceneGraph;
+        gltf.materials.forEach(material => {
+            this[$materials].push(new Material$1(onUpdate, gltf, material, gltfElementMap.get(material)));
+        });
+    }
+    /**
+     * Materials are listed in the order of the GLTF materials array, plus a
+     * default material at the end if one is used.
+     *
+     * TODO(#1003): How do we handle non-active scenes?
+     */
+    get materials() {
+        return this[$materials];
+    }
+}
+_a$c = $materials;
+
+/* @license
+ * Copyright 2020 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the 'License');
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an 'AS IS' BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 var __decorate$6 = (undefined && undefined.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof undefined === "function") r = undefined(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-const $updateThreeSide = Symbol('updateThreeSide');
-const $currentGLTF$1 = Symbol('currentGLTF');
-const $modelGraft$1 = Symbol('modelGraft');
-const $mainPort = Symbol('mainPort');
-const $threePort = Symbol('threePort');
-const $manipulator = Symbol('manipulator');
-const $modelKernel = Symbol('modelKernel');
-const $onModelChange = Symbol('onModelChange');
-const $onModelGraftMutation = Symbol('onModelGraftMutation');
+const $currentGLTF = Symbol('currentGLTF');
+const $model = Symbol('model');
+const $variants = Symbol('variants');
 /**
- * SceneGraphMixin manages a `<model-viewer>` integration with the 3DOM library
- * in order to support operations on the <model-viewer> scene graph.
+ * SceneGraphMixin manages exposes a model API in order to support operations on
+ * the <model-viewer> scene graph.
  */
 const SceneGraphMixin = (ModelViewerElement) => {
-    var _a, _b, _c, _d, _e, _f, _g;
-    var _h;
+    var _a, _b, _c;
     class SceneGraphModelViewerElement extends ModelViewerElement {
         constructor() {
             super(...arguments);
-            this[_h] = null;
-            this[_a] = null;
+            this[_a] = undefined;
             this[_b] = null;
-            this[_c] = null;
-            this[_d] = null;
-            this[_e] = null;
-            this[_f] = (event) => {
-                const { data } = event;
-                if (data && data.type === ThreeDOMMessageType.MODEL_CHANGE) {
-                    const serialized = data.model;
-                    const currentKernel = this[$modelKernel];
-                    if (currentKernel != null) {
-                        currentKernel.deactivate();
-                    }
-                    else if (serialized == null) {
-                        // Do not proceed if transitioning from null to null
-                        return;
-                    }
-                    if (serialized != null) {
-                        this[$modelKernel] = new ModelKernel(data.port, serialized);
-                    }
-                    else {
-                        this[$modelKernel] = null;
-                    }
-                    this.dispatchEvent(new CustomEvent('scene-graph-ready', { detail: { url: serialized ? serialized.modelUri : null } }));
-                }
-            };
-            this[_g] = (_event) => {
-                this[$needsRender]();
-            };
+            this[_c] = [];
+            this.variantName = undefined;
+            this.orientation = '0 0 0';
+            this.scale = '1 1 1';
         }
-        // ThreeDOM implementation:
+        // Scene-graph API:
         /** @export */
         get model() {
-            const kernel = this[$modelKernel];
-            return kernel ? kernel.model : undefined;
+            return this[$model];
         }
-        connectedCallback() {
-            super.connectedCallback();
-            const { port1, port2 } = new MessageChannel();
-            port1.start();
-            port2.start();
-            this[$mainPort] = port1;
-            this[$threePort] = port2;
-            this[$mainPort].onmessage = this[$onModelChange];
-        }
-        disconnectedCallback() {
-            super.disconnectedCallback();
-            this[$mainPort].close();
-            this[$threePort].close();
-            this[$mainPort] = null;
-            this[$threePort] = null;
-            if (this[$manipulator] != null) {
-                this[$manipulator].dispose();
-            }
-            if (this[$modelKernel] != null) {
-                this[$modelKernel].deactivate();
-            }
+        get availableVariants() {
+            return this[$variants];
         }
         updated(changedProperties) {
             super.updated(changedProperties);
-            if (changedProperties.has($modelGraft$1)) {
-                const oldModelGraft = changedProperties.get($modelGraft$1);
-                if (oldModelGraft != null) {
-                    oldModelGraft.removeEventListener('mutation', this[$onModelGraftMutation]);
+            if (changedProperties.has('variantName')) {
+                const variants = this[$variants];
+                const threeGLTF = this[$currentGLTF];
+                const { variantName } = this;
+                const variantIndex = variants.findIndex((v) => v === variantName);
+                if (threeGLTF == null || variantIndex < 0) {
+                    return;
                 }
-                const modelGraft = this[$modelGraft$1];
-                if (modelGraft != null) {
-                    modelGraft.addEventListener('mutation', this[$onModelGraftMutation]);
+                const onUpdate = () => {
+                    this[$needsRender]();
+                };
+                const updatedMaterials = threeGLTF.correlatedSceneGraph.loadVariant(variantIndex, onUpdate);
+                const { gltf, gltfElementMap } = threeGLTF.correlatedSceneGraph;
+                for (const index of updatedMaterials) {
+                    const material = gltf.materials[index];
+                    this[$model].materials[index] = new Material$1(onUpdate, gltf, material, gltfElementMap.get(material));
                 }
             }
+            if (changedProperties.has('orientation') ||
+                changedProperties.has('scale')) {
+                const { modelContainer } = this[$scene];
+                const orientation = parseExpressions(this.orientation)[0]
+                    .terms;
+                const roll = normalizeUnit(orientation[0]).number;
+                const pitch = normalizeUnit(orientation[1]).number;
+                const yaw = normalizeUnit(orientation[2]).number;
+                modelContainer.quaternion.setFromEuler(new Euler(pitch, yaw, roll, 'YXZ'));
+                const scale = parseExpressions(this.scale)[0]
+                    .terms;
+                modelContainer.scale.set(scale[0].number, scale[1].number, scale[2].number);
+                this[$scene].updateBoundingBox();
+                this[$scene].updateShadow();
+                this[$renderer].arRenderer.onUpdateScene();
+                this[$needsRender]();
+            }
         }
-        [(_h = $modelGraft$1, _a = $currentGLTF$1, _b = $mainPort, _c = $threePort, _d = $manipulator, _e = $modelKernel, $onModelLoad)]() {
+        [(_a = $model, _b = $currentGLTF, _c = $variants, $onModelLoad)]() {
             super[$onModelLoad]();
-            this[$updateThreeSide]();
-        }
-        [$updateThreeSide]() {
-            // Three.js side (will eventually move to worker)
-            const scene = this[$scene];
-            const { model } = scene;
-            const { currentGLTF } = model;
-            let modelGraft = null;
-            let manipulator = null;
+            this[$variants] = [];
+            const { currentGLTF } = this[$scene];
             if (currentGLTF != null) {
                 const { correlatedSceneGraph } = currentGLTF;
-                const currentModelGraft = this[$modelGraft$1];
-                const currentManipulator = this[$manipulator];
-                if (correlatedSceneGraph != null) {
-                    if (currentManipulator != null) {
-                        currentManipulator.dispose();
-                    }
-                    if (currentModelGraft != null && currentGLTF === this[$currentGLTF$1]) {
-                        return;
-                    }
-                    modelGraft = new ModelGraft(model.url || '', correlatedSceneGraph);
-                    let channel = null;
-                    if (modelGraft != null && modelGraft.model != null) {
-                        channel = new MessageChannel();
-                        manipulator = new ModelGraftManipulator(modelGraft, channel.port1);
-                        this[$threePort].postMessage({
-                            type: ThreeDOMMessageType.MODEL_CHANGE,
-                            model: modelGraft.model.toJSON(),
-                            port: channel.port2
-                        }, [channel.port2]);
-                    }
-                    else {
-                        this[$threePort].postMessage({
-                            type: ThreeDOMMessageType.MODEL_CHANGE,
-                            model: null,
-                            port: null
-                        });
+                if (correlatedSceneGraph != null &&
+                    currentGLTF !== this[$currentGLTF]) {
+                    this[$model] = new Model(correlatedSceneGraph, () => {
+                        this[$needsRender]();
+                    });
+                }
+                // KHR_materials_variants extension spec:
+                // https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_variants
+                const { gltfExtensions } = currentGLTF.userData;
+                if (gltfExtensions != null) {
+                    const extension = gltfExtensions['KHR_materials_variants'];
+                    if (extension != null) {
+                        this[$variants] =
+                            extension.variants.map(variant => variant.name);
+                        this.requestUpdate('variantName');
                     }
                 }
             }
-            this[$modelGraft$1] = modelGraft;
-            this[$manipulator] = manipulator;
-            this[$currentGLTF$1] = currentGLTF;
+            this[$currentGLTF] = currentGLTF;
+            // TODO: remove this event, as it is synonymous with the load event.
+            this.dispatchEvent(new CustomEvent('scene-graph-ready'));
         }
         /** @export */
         async exportScene(options) {
-            const { model } = this[$scene];
-            return new Promise(async (resolve, reject) => {
-                if (model == null) {
-                    return reject('Model missing or not yet loaded');
-                }
+            const scene = this[$scene];
+            return new Promise(async (resolve) => {
                 // Defaults
                 const opts = {
                     binary: true,
@@ -64422,9 +62198,9 @@ const SceneGraphMixin = (ModelViewerElement) => {
                 };
                 Object.assign(opts, options);
                 // Not configurable
-                opts.animations = model.animations;
+                opts.animations = scene.animations;
                 opts.truncateDrawRange = true;
-                const shadow = model[$shadow];
+                const shadow = scene.shadow;
                 let visible = false;
                 // Remove shadow from export
                 if (shadow != null) {
@@ -64432,7 +62208,7 @@ const SceneGraphMixin = (ModelViewerElement) => {
                     shadow.visible = false;
                 }
                 const exporter = new GLTFExporter();
-                exporter.parse(model.modelContainer, (gltf) => {
+                exporter.parse(scene.modelContainer, (gltf) => {
                     return resolve(new Blob([opts.binary ? gltf : JSON.stringify(gltf)], {
                         type: opts.binary ? 'application/octet-stream' :
                             'application/json'
@@ -64444,10 +62220,15 @@ const SceneGraphMixin = (ModelViewerElement) => {
             });
         }
     }
-    _f = $onModelChange, _g = $onModelGraftMutation;
     __decorate$6([
-        property({ type: Object })
-    ], SceneGraphModelViewerElement.prototype, _h, void 0);
+        property({ type: String, attribute: 'variant-name' })
+    ], SceneGraphModelViewerElement.prototype, "variantName", void 0);
+    __decorate$6([
+        property({ type: String, attribute: 'orientation' })
+    ], SceneGraphModelViewerElement.prototype, "orientation", void 0);
+    __decorate$6([
+        property({ type: String, attribute: 'scale' })
+    ], SceneGraphModelViewerElement.prototype, "scale", void 0);
     return SceneGraphModelViewerElement;
 };
 
@@ -64482,7 +62263,6 @@ const rotationRateIntrinsics = {
 const $autoRotateStartTime = Symbol('autoRotateStartTime');
 const $radiansPerSecond = Symbol('radiansPerSecond');
 const $syncRotationRate = Symbol('syncRotationRate');
-const $cameraChangeHandler = Symbol('cameraChangeHandler');
 const $onCameraChange = Symbol('onCameraChange');
 const StagingMixin = (ModelViewerElement) => {
     var _a, _b, _c;
@@ -64494,16 +62274,23 @@ const StagingMixin = (ModelViewerElement) => {
             this.rotationPerSecond = 'auto';
             this[_a] = performance.now();
             this[_b] = 0;
-            this[_c] = (event) => this[$onCameraChange](event);
+            this[_c] = (event) => {
+                if (!this.autoRotate) {
+                    return;
+                }
+                if (event.detail.source === 'user-interaction') {
+                    this[$autoRotateStartTime] = performance.now();
+                }
+            };
         }
         connectedCallback() {
             super.connectedCallback();
-            this.addEventListener('camera-change', this[$cameraChangeHandler]);
+            this.addEventListener('camera-change', this[$onCameraChange]);
             this[$autoRotateStartTime] = performance.now();
         }
         disconnectedCallback() {
             super.disconnectedCallback();
-            this.removeEventListener('camera-change', this[$cameraChangeHandler]);
+            this.removeEventListener('camera-change', this[$onCameraChange]);
             this[$autoRotateStartTime] = performance.now();
         }
         updated(changedProperties) {
@@ -64512,11 +62299,11 @@ const StagingMixin = (ModelViewerElement) => {
                 this[$autoRotateStartTime] = performance.now();
             }
         }
-        [(_a = $autoRotateStartTime, _b = $radiansPerSecond, _c = $cameraChangeHandler, $syncRotationRate)](style) {
+        [(_a = $autoRotateStartTime, _b = $radiansPerSecond, $syncRotationRate)](style) {
             this[$radiansPerSecond] = style[0];
         }
-        [$tick$1](time, delta) {
-            super[$tick$1](time, delta);
+        [$tick](time, delta) {
+            super[$tick](time, delta);
             if (!this.autoRotate || !this[$hasTransitioned]() ||
                 this[$renderer].isPresenting) {
                 return;
@@ -64527,14 +62314,6 @@ const StagingMixin = (ModelViewerElement) => {
                     this[$radiansPerSecond] * rotationDelta * 0.001;
             }
         }
-        [$onCameraChange](event) {
-            if (!this.autoRotate) {
-                return;
-            }
-            if (event.detail.source === 'user-interaction') {
-                this[$autoRotateStartTime] = performance.now();
-            }
-        }
         get turntableRotation() {
             return this[$scene].yaw;
         }
@@ -64542,6 +62321,7 @@ const StagingMixin = (ModelViewerElement) => {
             this[$scene].yaw = theta;
         }
     }
+    _c = $onCameraChange;
     __decorate$7([
         property({ type: Boolean, attribute: 'auto-rotate' })
     ], StagingModelViewerElement.prototype, "autoRotate", void 0);

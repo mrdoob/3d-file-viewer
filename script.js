@@ -16,7 +16,7 @@ window.addEventListener( 'load', function () {
 	function setCustomObject( object ) {
 
 		viewer.src = FAKE_SCENE;
-		scene.model.setObject( object );
+		scene.setObject( object );
 
 	}
 
@@ -146,8 +146,6 @@ window.addEventListener( 'load', function () {
 
 	}
 
-	/*
-
 	document.addEventListener( 'dragover', function ( event ) {
 
 		event.preventDefault();
@@ -158,12 +156,9 @@ window.addEventListener( 'load', function () {
 	document.addEventListener( 'drop', function ( event ) {
 
 		event.preventDefault();
-
 		handleFile( event.dataTransfer.files[ 0 ] );
 
 	}, false );
-
-	*/
 
 	// Chrome OS
 
